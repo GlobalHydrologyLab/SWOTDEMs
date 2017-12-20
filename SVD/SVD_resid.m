@@ -14,15 +14,15 @@ clear
 close all
 
  % Sac
-% load('/Users/Ted/Documents/MATLAB/SWOT_DEMs/Sacramento/transformedSacDataV2.mat')
-% zField = 'geoHeight';
-% rng = [2,330]; %upstream
+load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Sacramento/transformedSacDataV2.mat')
+zField = 'geoHeight';
+rng = [2,330]; %upstream
 % rng = [475,705]; %downstream
 
-% Po
-load('/Users/Ted/Documents/MATLAB/SWOT_DEMs/Po/transformedPoData.mat')
-zField = 'nHeight';
-rng = [100,340];
+% % Po
+% load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Po/transformedPoData.mat')
+% zField = 'nHeight';
+% rng = [100,340];
 % 
 % Tanana
 % load('/Users/Ted/Documents/MATLAB/SWOT_DEMs/Tanana/transformedTananaData.mat')
@@ -84,9 +84,9 @@ S = diag(S); %recreate diagonal matrix
 %now modify S, removing smaller components.
 S2 = S;
 S2(iSV+1:end,:) = 0;
-z2 = U*S2*V';
+z2resid = U*S2*V';
 
-z2 = z2 + polyval(m,s,[],mu);
+z2 = z2resid + polyval(m,s,[],mu);
 
 skm = truthAvg.sCoord/1000;
 

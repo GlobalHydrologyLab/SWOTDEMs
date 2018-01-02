@@ -16,7 +16,7 @@ isTruthFile = contains(fileName,'Truth');
 %all simulator data is processed to the same nodes, so instead of
 %transforming each set of x,y coords, i simply replace with a previously
 %transformed set in WGS84 UTM 10N.
-load('/Users/Ted/Documents/MATLAB/Sacramento/SWOTSimData/eastNorthNodesUTM.mat')
+load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Sacramento/SWOTSimData/eastNorthNodesUTM.mat')
 
 
 % import shapfiles

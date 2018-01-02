@@ -15,9 +15,9 @@ close all
 
  % Sac
 load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Sacramento/transformedSacDataV2.mat')
-zField = 'geoHeight';
-rng = [2,330]; %upstream
-% rng = [475,705]; %downstream
+zField = 'nWidth';
+% rng = [2,330]; %upstream
+rng = [475,705]; %downstream
 
 % % Po
 % load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Po/transformedPoData.mat')
@@ -25,9 +25,9 @@ rng = [2,330]; %upstream
 % rng = [100,340];
 % 
 % Tanana
-% load('/Users/Ted/Documents/MATLAB/SWOT_DEMs/Tanana/transformedTananaData.mat')
+% load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Tanana/transformedTananaData.mat')
 % zField = 'nHeight';
-% rng = [503, 624];
+% rng = [140,458];
 
 simulated = trimFields(simulated,rng);
 truth = trimFields(truth,rng);
@@ -63,8 +63,11 @@ truthZ = [truth.(zField)];
 
 
 %--------------------------------------------------------------------------
-% This needs evaluated. 
-% How to determine best rank- some choices actually increase errors.
+% Determine best rank 
+%
+% This section needs to be finished- magnitude option increases errors in
+% some cases. 
+%--------------------------------------------------------------------------
 
 S = diag(S); %extract diagonal values
 
@@ -90,10 +93,40 @@ z2 = z2resid + polyval(m,s,[],mu);
 
 skm = truthAvg.sCoord/1000;
 
-% smooth?
-% for i = 1:nProf
-%     z2(:,i) = smooth(z2(:,i),11,'loess');
-% end
+
+%--------------------------------------------------------------------------
+% Compare reach slopes
+%--------------------------------------------------------------------------
+hasReaches = isfield(simulated,'reach');
+
+if hasReaches
+    reaches = unique(simulated(1).reach)';
+
+    for r = reaches
+
+        for p = 1:nProf
+            inReach = simulated(p).reach == r;
+            fitSim = polyfit(s(inReach,p),z(inReach,p),1);
+            fitSVD = polyfit(s(inReach,p),z2(inReach,p),1);
+
+            inReach = truth(p).reach == r;
+            fitTruth = polyfit(truth(p).sCoord(inReach), ... 
+                truth(p).(zField)(inReach),1);
+
+            simSlopeErr(r,p) = fitSim(1) - fitTruth(1);
+            SVDSlopeErr(r,p) = fitSVD(1) - fitTruth(1);
+
+    %         simSlope(r,p) = fitSim(1);
+    %         SVDSlope(r,p) = fitSVD(1);
+    %         truthSlope(r,p) = fitTruth(1);
+        end
+
+        %calc reach length
+        RL(r,1) = range(s(inReach,1));
+
+    end
+end
+%--------------------------------------------------------------------------
 
 
 %--------------------------------------------------------------------------
@@ -144,44 +177,43 @@ xlabel('Elevation Error (m)')
 title('Empirical PDF of Node Errors')
 legend('Original Data','Low Rank')
 
-%errors
+
+%node errors
 RMSE = sqrt(mean(zErr.^2,1));
 RMSESVD = sqrt(mean(z2Err.^2,1));
-MAE = mean(abs(zErr),1);
-MAESVD = mean(abs(z2Err),1);
 figure()
 bar([RMSE' RMSESVD'],1,'grouped')
-% bar([MAE' MAESVD'],1,'grouped')
 ylabel('RMSE (m)')
 xlabel('Profile Number')
-title('Comparison of RMSEs')
+title('Node-level height errors')
 legend('Original Data','Low Rank','Location','Northwest')
 c = lines;
 colormap(c(1:2,:))
 
 
-% % minimum reach length from LeFavour & Alsdorf, 2005.
-% Smin = min(abs(diff(truthAvg.(zField))./diff(truthAvg.sCoord)));
-% zRL = 2.*std(zErr)./Smin/1000;
-% z2RL = 2.*std(z2Err)./Smin/1000;
-% if Smin == 0
-%     warning('Minimum slope = 0. Can''t calc minimum reach length.')
-% else
-%     figure()
-%     bar([zRL' z2RL'],1,'grouped')
-%     ylabel('Minimum Reach Length (km)')
-%     xlabel('Profile Number')
-%     title('Comparison of Minimum Reach Length')
-%     legend('Original Data','Low Rank','Location','Northwest')
-%     c = lines;
-%     colormap(c(1:2,:))
-% end
+%reach slope errors
+if hasReaches
+%     simSlopeMAE = mean(abs(simSlopeErr),1);
+%     SVDSlopeMAE = mean(abs(SVDSlopeErr),1);
+    simSlopeRMSE = sqrt(mean(simSlopeErr.^2,1));
+    SVDSlopeRMSE = sqrt(mean(SVDSlopeErr.^2,1));
+    figure()
+%     bar([simSlopeMAE' SVDSlopeMAE'] .* 10^5,1,'grouped')
+    bar([simSlopeRMSE' SVDSlopeRMSE'] .* 10^5,1,'grouped')
+    ylabel('RMSE (cm/km)')
+    xlabel('Profile Number')
+    title('Reach-level slope errors')
+    legend('Original Data','Low Rank','Location','Northwest')
+    c = lines;
+    colormap(c(1:2,:))
+end
 
-%R-mode analysis
-R = V*S2;
-figure()
-plot(R(:,1),R(:,2),'r.','MarkerSize',24)
+% % R-mode analysis
 
+% R = V*S2;
+% figure()
+% plot(R(:,1),R(:,2),'r.','MarkerSize',24)
 
+%--------------------------------------------------------------------------
 
 

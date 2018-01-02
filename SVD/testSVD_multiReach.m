@@ -42,11 +42,11 @@ close all
 % end
 
 % % Tanana
-% load('/Users/Ted/Documents/MATLAB/SWOT_DEMs/Tanana/transformedTananaData.mat')
+% load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Tanana/transformedTananaData.mat')
 % zField = 'nHeight';
 
 % % % Po
-load('/Users/Ted/Documents/MATLAB/SWOT_DEMs/Po/transformedPoDataV2.mat')
+load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Po/transformedPoDataV2.mat')
 zField = 'nHeight';
 
 clearvars -except simulated truth zField

@@ -15,9 +15,11 @@ close all
 
  % Sac
 load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Sacramento/transformedSacDataV2.mat')
-zField = 'nWidth';
-% rng = [2,330]; %upstream
-rng = [475,705]; %downstream
+zField = 'geoHeight';
+rng = [2,330]; %upstream
+% rng = [475,705]; %downstream
+
+
 
 % % Po
 % load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Po/transformedPoData.mat')
@@ -52,16 +54,14 @@ s = [simulated.sCoord];
 z = [simulated.(zField)];
 sv = reshape(s,[],1);
 zv = reshape(z,[],1);
+
 [m,~,mu] = polyfit(sv,zv,polyOrder);
-zhat = polyval(m,sv,[],mu);
-zresid = reshape(zv-zhat, [], nProf);
+zhat = polyval(m,s,[],mu);
+zresid = reshape(z-zhat, [], nProf);
 
 truthZ = [truth.(zField)];
 
-
 [U,S,V] = svd(zresid,0);
-
-
 %--------------------------------------------------------------------------
 % Determine best rank 
 %
@@ -103,7 +103,7 @@ if hasReaches
     reaches = unique(simulated(1).reach)';
 
     for r = reaches
-
+        
         for p = 1:nProf
             inReach = simulated(p).reach == r;
             fitSim = polyfit(s(inReach,p),z(inReach,p),1);
@@ -168,14 +168,15 @@ title('Singular Values of Elevation Residuals')
 
 zErr = z - truthZ;
 z2Err = z2 -truthZ;
+
 %epdf of all node errors
-figure()
-ksdensity(reshape(zErr,[],1))
-hold on
-ksdensity(reshape(z2Err,[],1))
-xlabel('Elevation Error (m)')
-title('Empirical PDF of Node Errors')
-legend('Original Data','Low Rank')
+% figure()
+% ksdensity(reshape(zErr,[],1))
+% hold on
+% ksdensity(reshape(z2Err,[],1))
+% xlabel('Elevation Error (m)')
+% title('Empirical PDF of Node Errors')
+% legend('Original Data','Low Rank')
 
 
 %node errors
@@ -187,8 +188,8 @@ ylabel('RMSE (m)')
 xlabel('Profile Number')
 title('Node-level height errors')
 legend('Original Data','Low Rank','Location','Northwest')
-c = lines;
-colormap(c(1:2,:))
+c = gray;
+colormap(c([10,40],:))
 
 
 %reach slope errors
@@ -204,8 +205,10 @@ if hasReaches
     xlabel('Profile Number')
     title('Reach-level slope errors')
     legend('Original Data','Low Rank','Location','Northwest')
-    c = lines;
-    colormap(c(1:2,:))
+%     c = lines;
+%     colormap(c(1:2,:))
+    c = gray;
+    colormap(c([10,40],:))
 end
 
 % % R-mode analysis

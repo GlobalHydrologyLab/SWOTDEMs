@@ -34,15 +34,12 @@ c = c(1:max(section),:);
 colormap([1 1 1; c])
 
 
-for r = min(section):2%max(section)
+for r = min(section):1%max(section)
     
     inSect = section == r;
     
     simReach = trimFields(simulated,inSect);
     truthReach = trimFields(truth,inSect);
-
-%     [simAvg, profMask] = nodeAvg3_1(simReach,zField);
-%     truthAvg = nodeAvg3_1(truthReach, zField, profMask);
     
     %assemble full rectangular matricies of s,z data 
     z = zArray(inSect,:);
@@ -90,10 +87,12 @@ for r = min(section):2%max(section)
 
     z2 = z2resid + polyval(m,s,[],mu);
 
-%     skm = truthAvg.sCoord/1000;
-%     truthZ = [truthReach.(zField)];
+    
+    skm = mean(s,2)/1000;
+    truthZ = truthAllign.(zField)(inSect,~delCol);
 
 end
+
 
 %--------------------------------------------------------------------------
 % plots

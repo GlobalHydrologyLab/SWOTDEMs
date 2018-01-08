@@ -4,44 +4,50 @@
 % now, using reaches as defined by Renato.
 
 %   TO DO:
-% - extend to loop through reaches
-% -- join reaches, not necessary but provides nice visual.
+% - look into removing erroneous data from orbit 527 before SVD. The large
+%       (and obvious) errors can dominate the decomposition results and
+%       make comparisons of errors kind of disingenuous.
 % - make sure # of singular values chosen is providing best results.
+% - compare results to a svds() methods with reaches instead of sections.
 
 clear
 close all
 
- % Sac
+%Sac
 load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Sacramento/transformedSacDataV2.mat')
 zField = 'geoHeight';
 clearvars -except simulated truth zField
 
-%sectify
-simAllign = nodeAllign(simulated);
-simAllign.(zField)(simAllign.(zField)==-9999) = NaN;
-truthAllign = nodeAllign(truth);
+% % hard-coded removal of high mean z days for sacramento
+% simulated(16) = [];
+% truth(16)=[];
+% simulated(6) = [];
+% truth(6)=[];
 
+%Group data into matrices without gaps, intelligently deleting data so that
+%all sections have >= sectMin rows
 sectMin = 25;
+simAllign = nodeAllign(simulated);
+truthAllign = nodeAllign(truth);
+simAllign.(zField)(simAllign.(zField)==-9999) = NaN; %missing data value
+truthAllign.(zField)(truthAllign.(zField)==-9999) = NaN; %missing data value
+
 [section, zArray] = subsectByObs(simAllign.(zField),sectMin);
 observedBy = ~isnan(zArray);
 
-%rothko plot
-imagesc(observedBy .* section)
-xlabel('Profile')
-ylabel('Node')
-c = lines;
-c = c(1:max(section),:);
-colormap([1 1 1; c])
+%init. matrices for storing section data
+dim = size(simAllign.sCoord);
+z2All = nan(dim);
+sAll = nan(dim);
 
-
-for r = min(section):1%max(section)
+for r = min(section):max(section)
     
     inSect = section == r;
     
     simReach = trimFields(simulated,inSect);
     truthReach = trimFields(truth,inSect);
     
-    %assemble full rectangular matricies of s,z data 
+    %assemble full rectangular matrices of s,z data 
     z = zArray(inSect,:);
     [z, delCol] = nanRows(z,2);
     s = simAllign.sCoord(inSect,~delCol);
@@ -60,8 +66,9 @@ for r = min(section):1%max(section)
     %----------------------------------------------------------------------
     % Determine best rank 
     %
-    % This section needs to be finished- magnitude option increases errors
-    % in some cases.
+    % This section needs to be finished- both break in magnitude and IQR
+    % approach perform better than the other in some cases. Maybe some kind
+    % of consensus with a third method could work.
     %----------------------------------------------------------------------
 
     S = diag(S); %extract diagonal values
@@ -69,12 +76,11 @@ for r = min(section):1%max(section)
     % WORKING IDEAS:
 
     %largest decrease in magnitude
-    % [~,iSV] = min(diff(S));
+%     [~,iSV] = min(diff(S));
 
     %inter quartile range approach.
     IQR = iqr(S);
     iSV = find(S >= median(S) + 1.5*IQR,1,'last');
-%     iSV=2;
 
     S = diag(S); %recreate diagonal matrix
     %----------------------------------------------------------------------
@@ -86,34 +92,77 @@ for r = min(section):1%max(section)
     z2resid = U*S2*V';
 
     z2 = z2resid + polyval(m,s,[],mu);
-
-    
-    skm = mean(s,2)/1000;
-    truthZ = truthAllign.(zField)(inSect,~delCol);
-
+  
+    % join section data for later comparison
+    z2All(inSect,~delCol) = z2;
+    sAll(inSect,~delCol) = s;
 end
+
+skm = nanmean(sAll,2)/1000;
+zAll = simAllign.(zField);
+truthZ = truthAllign.(zField);
+
+%--------------------------------------------------------------------------
+% Reach Slopes
+%--------------------------------------------------------------------------
+hasReaches = isfield(simulated,'reach');
+
+if hasReaches
+    reaches = unique(simulated(1).reach)';
+
+    for r = reaches
+        for p = 1:nProf
+            inReach = simAllign.reach(:,p) == r;
+            fitSim = polyfit(sAll(inReach,p),zAll(inReach,p),1);
+            fitSVD = polyfit(sAll(inReach,p),z2All(inReach,p),1);
+
+            inReach = truth(p).reach == r;
+            fitTruth = polyfit(truth(p).sCoord(inReach), ... 
+                truth(p).(zField)(inReach),1);
+
+            simSlopeErr(r,p) = fitSim(1) - fitTruth(1);
+            SVDSlopeErr(r,p) = fitSVD(1) - fitTruth(1);
+
+    %         simSlope(r,p) = fitSim(1);
+    %         SVDSlope(r,p) = fitSVD(1);
+    %         truthSlope(r,p) = fitTruth(1);
+        end
+
+        %calc reach length
+        RL(r,1) = range(sAll(inReach,1));
+
+    end
+end
+%--------------------------------------------------------------------------
 
 
 %--------------------------------------------------------------------------
 % plots
 %--------------------------------------------------------------------------
 
+%rothko section plot
+imagesc(observedBy .* section)
+xlabel('Profile')
+ylabel('Node')
+c = lines;
+c = c(1:max(section),:);
+colormap([1 1 1; c])
+
+
 %original and approx profiles
 handle = figure();
 subplot(2,1,1);
-plot(skm,z)
+plot(skm,zAll)
 hold on
-% plot(skm,truthAvg.(zField),'k','Linewidth',2)
-plot(skm,truthReach(1).(zField),'k','Linewidth',2)
+plot(skm,truth(3).(zField),'k','Linewidth',2)
 xlabel('Flow Distance (km)')
 ylabel('Elevation (m)')
 title('Original Simulated Profiles')
 
 subplot(2,1,2);
-plot(skm,z2)
+plot(skm,z2All)
 hold on
-% plot(skm,truthAvg.(zField),'k','Linewidth',2)
-plot(skm,truthReach(1).(zField),'k','Linewidth',2)
+plot(skm,truth(3).(zField),'k','Linewidth',2)
 xlabel('Flow Distance (km)')
 ylabel('Elevation (m)')
 title('Low-Rank Approximation Profiles')
@@ -129,10 +178,10 @@ bar(diag(S))
 xlabel('Singular Value Number')
 ylabel('Singular Value Magnitude')
 title('Singular Values of Elevation Residuals')
-% set(gca,'YScale','log')
 
-zErr = z - truthZ;
-z2Err = z2 -truthZ;
+
+zErr = zAll - truthZ;
+z2Err = z2All - truthZ;
 
 %epdf of all node errors
 % figure()
@@ -145,11 +194,14 @@ z2Err = z2 -truthZ;
 
 
 %node errors
-RMSE = sqrt(mean(zErr.^2,1));
-RMSESVD = sqrt(mean(z2Err.^2,1));
+% RMSE = sqrt(nanmean(zErr.^2,1));
+% RMSESVD = sqrt(nanmean(z2Err.^2,1));
+MAE = nanmean(abs(zErr));
+MAESVD = nanmean(abs(z2Err));
 figure()
-bar([RMSE' RMSESVD'],1,'grouped')
-ylabel('RMSE (m)')
+% bar([RMSE' RMSESVD'],1,'grouped')
+bar([MAE' MAESVD'],1,'grouped')
+ylabel('MAE (m)')
 xlabel('Profile Number')
 title('Node-level height errors')
 legend('Original Data','Low Rank','Location','Northwest')
@@ -157,22 +209,22 @@ c = gray;
 colormap(c([10,40],:))
 
 
-%reach slope errors
-%     simSlopeMAE = mean(abs(simSlopeErr),1);
-%     SVDSlopeMAE = mean(abs(SVDSlopeErr),1);
-%     simSlopeRMSE = sqrt(mean(simSlopeErr.^2,1));
-%     SVDSlopeRMSE = sqrt(mean(SVDSlopeErr.^2,1));
-%     figure()
-% %     bar([simSlopeMAE' SVDSlopeMAE'] .* 10^5,1,'grouped')
+% reach slope errors
+    simSlopeMAE = nanmean(abs(simSlopeErr),1);
+    SVDSlopeMAE = nanmean(abs(SVDSlopeErr),1);
+    simSlopeRMSE = sqrt(nanmean(simSlopeErr.^2,1));
+    SVDSlopeRMSE = sqrt(nanmean(SVDSlopeErr.^2,1));
+    figure()
+    bar([simSlopeMAE' SVDSlopeMAE'] .* 10^5,1,'grouped')
 %     bar([simSlopeRMSE' SVDSlopeRMSE'] .* 10^5,1,'grouped')
-%     ylabel('RMSE (cm/km)')
-%     xlabel('Profile Number')
-%     title('Reach-level slope errors')
-%     legend('Original Data','Low Rank','Location','Northwest')
-% %     c = lines;
-% %     colormap(c(1:2,:))
-%     c = gray;
-%     colormap(c([10,40],:))
+    ylabel('MAE (cm/km)')
+    xlabel('Profile Number')
+    title('Reach-level slope errors')
+    legend('Original Data','Low Rank','Location','Northwest')
+%     c = lines;
+%     colormap(c(1:2,:))
+    c = gray;
+    colormap(c([10,40],:))
 
 % % R-mode analysis
 

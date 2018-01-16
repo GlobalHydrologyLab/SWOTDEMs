@@ -4,11 +4,21 @@
 % Reaches are defined by equiReach.m, which takes in total number of nodes
 % and desired number of nodes per reach.
 
-%   TO DO:
-% - look into removing erroneous data from orbit 527 before SVD. The large
+%--------------------------------------------------------------------------
+% TO DO:
+%--------------------------------------------------------------------------
+% X look into removing erroneous data from orbit 527 before SVD. The large
 %       (and obvious) errors can dominate the decomposition results and
 %       make comparisons of errors kind of disingenuous.
+% X-- Hard-coded removal for now. I think this is fine. 
+%
 % - make sure # of singular values chosen is providing best results.
+%
+% - General cleaning of code.
+%
+% - reimagine error summary plots. Bar graph is good up to about ~15 groups
+%        on the x-axis, then it becomes difficult to read.
+%--------------------------------------------------------------------------
 
 clear
 close all
@@ -20,6 +30,8 @@ zField = 'geoHeight';
 for i = 10:17
     simulated(i).geoHeight(339:487) = NaN;
 end
+simulated(6) = [];
+truth(6) = [];
 
 % % Po
 % load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Po/transformedPoDataV2.mat')
@@ -47,8 +59,8 @@ truth = trimFields(truth,nodeRng);
 % Create reaches
 %--------------------------------------------------------------------------
 nodePerReach = 25;
+reachVec = equiReach(range(nodeRng)+1,nodePerReach);
 for i = 1:length(simulated)
-    reachVec = equiReach(range(nodeRng)+1,nodePerReach);
     simulated(i).reach = reachVec;
     truth(i).reach = reachVec;
 end
@@ -62,16 +74,12 @@ truthAllign.(zField)(truthAllign.(zField)==-9999) = NaN; %missing data value
 observedBy = ~isnan(zArray);
 
 
-
-
 %init. matrices for storing section data
 dim = size(simAllign.sCoord);
 z2All = nan(dim);
 sAll = nan(dim);
 
 for r = min(section):max(section)
-    
-    flipFlag=0;
     inSect = section == r;
     
     simReach = trimFields(simAllign,inSect);
@@ -99,13 +107,7 @@ for r = min(section):max(section)
     zhat = polyval(m,s,[],mu);
     zresid = reshape(z-zhat, [], nProfSect);
     
-    %SVD requires nRows>nCol so if this is a problem, flip matrix.
-    if size(zresid,2)>size(zresid,1)
-        flipFlag = 1;
-        zresid = zresid';
-    end
-    
-    [U,S,V] = svd(zresid,0);
+    [U,S,V] = svd(zresid);
     
     %----------------------------------------------------------------------
     % Determine best rank 
@@ -114,37 +116,28 @@ for r = min(section):max(section)
     % approach perform better than the other in some cases. Maybe some kind
     % of consensus with a third method could work.
     %----------------------------------------------------------------------
-    S = diag(S); %extract diagonal values
-
+    SVal = diag(S);
+    
     % WORKING IDEAS:
     
     %largest decrease in magnitude
 %     [~,iSV] = min(diff(S));
 
     %inter quartile range approach.
-    IQR = iqr(S);
-    iSV = find(S >= median(S) + 2*IQR,1,'last');
+    IQR = iqr(SVal);
+    iSV = find(SVal >= median(SVal) + 2*IQR,1,'last');
     
     %cumulative percent of sing. val. threshold.
 %     p = 0.5;
 %     iSV = find(cumsum(S)./sum(S) >= p,1,'first')
-    
-
-    S = diag(S); %recreate diagonal matrix
     %----------------------------------------------------------------------
-
 
     %now modify S, removing smaller components.
     S2 = S;
     S2(iSV+1:end,:) = 0;
-    z2resid = U*S2*V';
     
-    %if we had to flip the matrix, flip back.
-    if flipFlag
-        zresid = zresid';
-        z2resid = z2resid';
-    end
-
+    %recombine
+    z2resid = U*S2*V';
     z2 = z2resid + polyval(m,s,[],mu);
   
     % join section data for later comparison
@@ -156,14 +149,15 @@ skm = nanmean(sAll,2)/1000;
 zAll = simAllign.(zField);
 
 %--------------------------------------------------------------------------
-% Reach Slopes
+% Reach Stats
 %--------------------------------------------------------------------------
 reaches = unique(reachVec)';
 
-simSlopeErr = nan(length(reaches),nProf);
-SVDSlopeErr = nan(length(reaches),nProf);
-reachZErr = nan(length(reaches),nProf);
-reachZ2Err = nan(length(reaches),nProf);
+simStats.slopeErr = nan(length(reaches),nProf);
+svdStats.slopeErr = nan(length(reaches),nProf);
+simStats.reachAvgZ = nan(length(reaches),nProf);
+svdStats.reachAvgZ = nan(length(reaches),nProf);
+reachAvgTruth = nan(length(reaches),nProf);
 
 for r = reaches
     RL(r) = range(skm(reachVec==r));
@@ -177,23 +171,20 @@ for r = reaches
             fitTruth = polyfit(truthAllign.sCoord(inReach,p), ... 
                 truthAllign.(zField)(inReach,p),1);
 
-            simSlopeErr(r,p) = fitSim(1) - fitTruth(1);
-            SVDSlopeErr(r,p) = fitSVD(1) - fitTruth(1);
+            simStats.slopeErr(r,p) = fitTruth(1) - fitSim(1);
+            svdStats.slopeErr(r,p) = fitTruth(1) - fitSVD(1);
+            simStats.relSlopeErr(r,p) = simStats.slopeErr(r,p) / fitTruth(1);
+            svdStats.relSlopeErr(r,p) = svdStats.slopeErr(r,p) / fitTruth(1);
             
-            reachAvgZ(r,p) = mean(zAll(inReach,p));
-            reachAvgZ2(r,p) = mean(z2All(inReach,p));
-            reachAvgTruth(r,p) = mean(truthAllign.(zField)(inReach,p));
-            
-            reachZErr(r,p) = reachAvgTruth(r,p) - reachAvgZ(r,p);
-            reachZ2Err(r,p) = reachAvgTruth(r,p) - reachAvgZ2(r,p);
+            simStats.reachAvgZ(r,p) = nanmean(zAll(inReach,p));
+            svdStats.reachAvgZ(r,p) = nanmean(z2All(inReach,p));
+            reachAvgTruth(r,p) = nanmean(truthAllign.(zField)(inReach,p));
         end
-
-%         simSlope(r,p) = fitSim(1);
-%         SVDSlope(r,p) = fitSVD(1);
-%         truthSlope(r,p) = fitTruth(1);
     end
-
 end
+
+simStats.reachZErr = reachAvgTruth - simStats.reachAvgZ;
+svdStats.reachZErr = reachAvgTruth - svdStats.reachAvgZ;
 
 %% 
 
@@ -256,40 +247,29 @@ zErr = zAll - truthAllign.(zField);
 z2Err = z2All - truthAllign.(zField);
 
 %epdf of all node errors
-% figure()
-% ksdensity(reshape(zErr,[],1))
-% hold on
-% ksdensity(reshape(z2Err,[],1))
-% xlabel('Elevation Error (m)')
-% title('Empirical PDF of Node Errors')
-% legend('Original Data','Low Rank')
-
-
-%node errors
-RMSE = sqrt(nanmean(zErr.^2,1));
-RMSESVD = sqrt(nanmean(z2Err.^2,1));
-MAE = nanmean(abs(zErr));
-MAESVD = nanmean(abs(z2Err));
 figure()
-bar([RMSE' RMSESVD'],1,'grouped')
-% bar([MAE' MAESVD'],1,'grouped')
-ylabel('RMSE (m)')
-xlabel('Profile Number')
-title('Node-level height errors')
-legend('Original Data','Low Rank','Location','Northwest')
-c = gray;
-colormap(c([10,40],:))
-
+ksdensity(reshape(zErr,[],1))
+hold on
+ksdensity(reshape(z2Err,[],1))
+xlabel('Elevation Error (m)')
+title('Empirical PDF of Node Errors')
+legend('Original Data','Low Rank')
 
 % reach slope errors
-simSlopeMAE = nanmean(abs(simSlopeErr),1);
-SVDSlopeMAE = nanmean(abs(SVDSlopeErr),1);
-simSlopeRMSE = sqrt(nanmean(simSlopeErr.^2,1));
-SVDSlopeRMSE = sqrt(nanmean(SVDSlopeErr.^2,1));
+simStats.slopeMAE = nanmean(abs(simStats.slopeErr),1);
+svdStats.slopeMAE = nanmean(abs(svdStats.slopeErr),1);
+
+simStats.slopeRMSE = sqrt(nanmean(simStats.slopeErr.^2,1));
+svdStats.slopeRMSE = sqrt(nanmean(svdStats.slopeErr.^2,1));
+
+simStats.slopeRRMSE = sqrt(nanmean(simStats.relSlopeErr.^2,1));
+svdStats.slopeRRMSE = sqrt(nanmean(svdStats.relSlopeErr.^2,1));
+
 figure()
-% bar([simSlopeMAE' SVDSlopeMAE'] .* 10^5,1,'grouped')
-bar([simSlopeRMSE' SVDSlopeRMSE'] .* 10^5,1,'grouped')
-ylabel('RMSE (cm/km)')
+% bar([simStats.slopeMAE' svdStats.slopeMAE'] .* 10^5,1,'grouped')
+% bar([simStats.slopeRMSE' svdStats.slopeRMSE'] .* 10^5,1,'grouped')
+bar([simStats.slopeRRMSE' svdStats.slopeRRMSE'] .* 100,1,'grouped')
+ylabel('RRMSE (%)')
 xlabel('Profile Number')
 title('Reach-level slope errors')
 legend('Original Data','Low Rank','Location','Northwest')
@@ -300,14 +280,15 @@ colormap(c([10,40],:))
 
 
 % reach elev. errors
-reachZMAE = nanmean(abs(reachZErr),1);
-reachZ2MAE = nanmean(abs(reachZ2Err),1);
-reachZRMSE = sqrt(nanmean(reachZErr.^2,1));
-reachZ2RMSE = sqrt(nanmean(reachZ2Err.^2,1));
+simStats.reachZMAE = nanmean(abs(simStats.reachZErr),1);
+svdStats.reachZMAE = nanmean(abs(svdStats.reachZErr),1);
+
+simStats.reachZRMSE = sqrt(nanmean(simStats.reachZErr.^2,1));
+svdStats.reachZRMSE = sqrt(nanmean(svdStats.reachZErr.^2,1));
 figure()
-% bar([simSlopeMAE' SVDSlopeMAE'] .* 10^5,1,'grouped')
-bar([reachZRMSE' reachZ2RMSE'] .* 10^5,1,'grouped')
-ylabel('RMSE (cm/km)')
+bar([simStats.reachZMAE' svdStats.reachZMAE'],1,'grouped')
+% bar([simStats.reachZRMSE' svdStats.reachZRMSE'],1,'grouped')
+ylabel('MAE (m)')
 xlabel('Profile Number')
 title('Reach-level elevation errors')
 legend('Original Data','Low Rank','Location','Northwest')

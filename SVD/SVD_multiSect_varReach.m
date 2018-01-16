@@ -9,25 +9,24 @@
 %       (and obvious) errors can dominate the decomposition results and
 %       make comparisons of errors kind of disingenuous.
 % - make sure # of singular values chosen is providing best results.
-% - compare results to a svds() methods with reaches instead of sections.
 
 clear
 close all
 
 % % Sac
-% load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Sacramento/transformedSacDataV2.mat')
-% zField = 'geoHeight';
-% % hard-coded removal of far range data from pass 527
-% for i = 10:17
-%     simulated(i).geoHeight(339:487) = NaN;
-% end
+load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Sacramento/transformedSacDataV2.mat')
+zField = 'geoHeight';
+% hard-coded removal of far range data from pass 527
+for i = 10:17
+    simulated(i).geoHeight(339:487) = NaN;
+end
 
 % % Po
-load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Po/transformedPoDataV2.mat')
-zField = 'nHeight';
-% % hard-coded removal of far range data
-simulated(18:35) = trimFields(simulated(18:35),1:400);
-truth(18:35) = trimFields(truth(18:35),1:400);
+% load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Po/transformedPoDataV2.mat')
+% zField = 'nHeight';
+% % % hard-coded removal of far range data
+% simulated(18:35) = trimFields(simulated(18:35),1:400);
+% truth(18:35) = trimFields(truth(18:35),1:400);
 
 % % Tanana
 % load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Tanana/transformedTananaData.mat')
@@ -272,8 +271,8 @@ RMSESVD = sqrt(nanmean(z2Err.^2,1));
 MAE = nanmean(abs(zErr));
 MAESVD = nanmean(abs(z2Err));
 figure()
-% bar([RMSE' RMSESVD'],1,'grouped')
-bar([MAE' MAESVD'],1,'grouped')
+bar([RMSE' RMSESVD'],1,'grouped')
+% bar([MAE' MAESVD'],1,'grouped')
 ylabel('RMSE (m)')
 xlabel('Profile Number')
 title('Node-level height errors')
@@ -288,11 +287,29 @@ SVDSlopeMAE = nanmean(abs(SVDSlopeErr),1);
 simSlopeRMSE = sqrt(nanmean(simSlopeErr.^2,1));
 SVDSlopeRMSE = sqrt(nanmean(SVDSlopeErr.^2,1));
 figure()
-    bar([simSlopeMAE' SVDSlopeMAE'] .* 10^5,1,'grouped')
-% bar([simSlopeRMSE' SVDSlopeRMSE'] .* 10^5,1,'grouped')
+% bar([simSlopeMAE' SVDSlopeMAE'] .* 10^5,1,'grouped')
+bar([simSlopeRMSE' SVDSlopeRMSE'] .* 10^5,1,'grouped')
 ylabel('RMSE (cm/km)')
 xlabel('Profile Number')
 title('Reach-level slope errors')
+legend('Original Data','Low Rank','Location','Northwest')
+%     c = lines;
+%     colormap(c(1:2,:))
+c = gray;
+colormap(c([10,40],:))
+
+
+% reach elev. errors
+reachZMAE = nanmean(abs(reachZErr),1);
+reachZ2MAE = nanmean(abs(reachZ2Err),1);
+reachZRMSE = sqrt(nanmean(reachZErr.^2,1));
+reachZ2RMSE = sqrt(nanmean(reachZ2Err.^2,1));
+figure()
+% bar([simSlopeMAE' SVDSlopeMAE'] .* 10^5,1,'grouped')
+bar([reachZRMSE' reachZ2RMSE'] .* 10^5,1,'grouped')
+ylabel('RMSE (cm/km)')
+xlabel('Profile Number')
+title('Reach-level elevation errors')
 legend('Original Data','Low Rank','Location','Northwest')
 %     c = lines;
 %     colormap(c(1:2,:))

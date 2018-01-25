@@ -52,7 +52,7 @@
 %only run that code when necessary.
 % 
 clear
-close all
+% close all
 
 load('Po/transformedPoDataV2.mat')
 zField = 'nHeight';
@@ -124,11 +124,12 @@ RMSEsmooth = sqrt(nanmean((simSmooth - truthAvg.nHeight).^2));
 
 
 %% plot things
-close all
+% close all
 
 figure()
 plot(truthAvg.sCoord/1000,truthAvg.(zField),'k-','Linewidth',2)
 hold on
+plot(simAvg.sCoord/1000,simAvg.(zField),'b-','Linewidth',1)
 plot(slm.x/1000,slmProf,'r-','LineWidth',2) %slm profile
 % plot(slm.knots/1000,knotZ,'b*','MarkerFaceColor','b')
 xlabel('Flow distance (km)')

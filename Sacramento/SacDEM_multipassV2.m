@@ -84,7 +84,10 @@ tic
 clear
 close all
 
-load('Sacramento/transformedSacDataV2.mat')
+% load('Sacramento/transformedSacDataV2.mat')
+load('Sacramento/SacDataV3.mat')
+
+load('Sacramento/SacDataV3.mat')
 zField = 'geoHeight';
 
 %% cleaning up pass 527
@@ -93,31 +96,31 @@ zField = 'geoHeight';
 % identified by having NaN value for nWidth, so all fields with nWidth =
 % NaN are effectively deleted here. Set to NaN for array size continuity.
 
-for i = 1:length(truth)
-    %true where widths are missing or height is default -9999 value.
-    iBadHeight = isnan(truth(i).nWidth) | truth(i).geoHeight == -9999; 
-    
-    simulated(i).reach(iBadHeight) = NaN;
-    simulated(i).node(iBadHeight) = NaN;
-    simulated(i).easting(iBadHeight) = NaN;
-    simulated(i).northing(iBadHeight) = NaN;
-    simulated(i).nHeight(iBadHeight) = NaN;
-    simulated(i).nWidth(iBadHeight) = NaN;
-    simulated(i).geoHeight(iBadHeight) = NaN;
-    simulated(i).sCoord(iBadHeight) = NaN; 
-    simulated(i).nCoord(iBadHeight) = NaN;
-    
-    
-    truth(i).reach(iBadHeight) = NaN;
-    truth(i).node(iBadHeight) = NaN;
-    truth(i).easting(iBadHeight) = NaN;
-    truth(i).northing(iBadHeight) = NaN;
-    truth(i).nHeight(iBadHeight) = NaN;
-    truth(i).nWidth(iBadHeight) = NaN;
-    truth(i).geoHeight(iBadHeight) = NaN;
-    truth(i).sCoord(iBadHeight) = NaN; 
-    truth(i).nCoord(iBadHeight) = NaN;
-end
+% for i = 1:length(truth)
+%     %true where widths are missing or height is default -9999 value.
+%     iBadHeight = isnan(truth(i).nWidth) | truth(i).geoHeight == -9999; 
+%     
+%     simulated(i).reach(iBadHeight) = NaN;
+%     simulated(i).node(iBadHeight) = NaN;
+%     simulated(i).easting(iBadHeight) = NaN;
+%     simulated(i).northing(iBadHeight) = NaN;
+%     simulated(i).nHeight(iBadHeight) = NaN;
+%     simulated(i).nWidth(iBadHeight) = NaN;
+%     simulated(i).geoHeight(iBadHeight) = NaN;
+%     simulated(i).sCoord(iBadHeight) = NaN; 
+%     simulated(i).nCoord(iBadHeight) = NaN;
+%     
+%     
+%     truth(i).reach(iBadHeight) = NaN;
+%     truth(i).node(iBadHeight) = NaN;
+%     truth(i).easting(iBadHeight) = NaN;
+%     truth(i).northing(iBadHeight) = NaN;
+%     truth(i).nHeight(iBadHeight) = NaN;
+%     truth(i).nWidth(iBadHeight) = NaN;
+%     truth(i).geoHeight(iBadHeight) = NaN;
+%     truth(i).sCoord(iBadHeight) = NaN; 
+%     truth(i).nCoord(iBadHeight) = NaN;
+% end
 
 
 %% bias correction
@@ -174,6 +177,7 @@ knotZ = slmeval(slm.knots,slm);
 %% RMSEs
 RMSEslm = sqrt(mean((slmProf - truthAvg.geoHeight).^2));
 MAEslm = mean(abs(slmProf - truthAvg.geoHeight));
+MAEsim = mean(abs(simAvg.geoHeight - truthAvg.geoHeight));
 
 RMSEsimAvg = sqrt(mean((simAvg.geoHeight - truthAvg.geoHeight).^2));
 RMSEsmooth = sqrt(nanmean((simSmooth - truthSmooth).^2));
@@ -184,16 +188,43 @@ for i=1:length(simulated)
 end
 
  
-%% Slopes
+%% Define reaches
 
-% slopeSLMTruth = diff(slmProfTruth)./diff(slmTruth.x)*-1;
-slopeTruth = diff(truthAvg.sCoord)./diff(truthAvg.geoHeight)*-1;
-slopeSLM = diff(slmProf)./diff(slm.x)*-1;
-slopeDiff = slopeSLM-slopeTruth;
+nodeRng = [min(simAllign.node(1,:)), max(simAllign.node(end,:))];
+nodePerReach = 25;
+reachVec = equiReach(range(nodeRng)+1,nodePerReach);
+
+[simulated.reach] = deal(reachVec);
+[truth.reach] = deal(reachVec);
+
+%% Reach stats
+reaches = unique(reachVec)';
+
+for r = reaches
+    inReach = reachVec == r;
+    RL(r) = range(simAvg.sCoord(inReach));
+    if sum(inReach)>=2
+        fitSim = polyfit(simAvg.sCoord(inReach), simAvg.(zField)(inReach),1);
+        fitSLM = polyfit(slm.x(inReach),slmProf(inReach),1);
+        
+        fitTruth = polyfit(truthAvg.sCoord(inReach), truthAvg.(zField)(inReach),1);
+
+        SimSlopeErr(r) = fitTruth(1) - fitSim(1);
+        SLMSlopeErr(r) = fitTruth(1) - fitSLM(1);
+        SimRelSlopeErr(r) = SimSlopeErr(r) / fitTruth(1) .*100;
+        SLMRelSlopeErr(r) = SLMSlopeErr(r) / fitTruth(1) .*100;
+    end
+end
+
+simRRMSE = sqrt(mean(SimRelSlopeErr.^2));
+SLMRRMSE = sqrt(mean(SLMRelSlopeErr.^2));
+
 
 %% plot things
 close all
-% 
+
+
+for i = 1;
 % figure(1)
 % hold on
 % title('pass 249')
@@ -227,14 +258,13 @@ close all
 % figure(2)
 % h = findobj(gca,'Type','line');
 % legend(h(1:2),'model','simulated');
+end
 
 
-
-%profile view
-figure()
-hold on
-
+% All DEMs
+% figure()
 % plot(ASTER(:,4)/1000,ASTER(:,3),'Linewidth',2)
+% hold on
 % plot(SRTM(:,4)/1000,SRTM(:,3),'Linewidth',2)
 % plot(NED(:,4)/1000,NED(:,3),'Linewidth',2) 
 % plot(drifter(:,4)/1000,drifter(:,3)+29,'Linewidth',2)
@@ -245,13 +275,14 @@ hold on
 % pbaspect([4 3 1])
 
 
-% 
+figure()
+hold on
 % plot(simAvg.sCoord/1000,simAvg.geoHeight,'LineWidth',2) %averaged output profile
 % plot(truthAvg.sCoord/1000,truthAvg.geoHeight,'LineWidth',2) %averaged input profile
 % plot(truth(1).sCoord/1000,[truth.geoHeight])
 plot(truthAvg.sCoord/1000,truthAvg.geoHeight,'k','LineWidth',2) %averaged input profile
+plot(simAvg.sCoord/1000,simAvg.geoHeight,'b-','LineWidth',1)
 plot(slm.x/1000,slmProf,'r-','LineWidth',2) %slm profile
-plot(simAvg.sCoord/1000,simAvg.geoHeight,'-')
 
 legend('Simulator input node median','Constrained weighted spline')
 title('Median SWOT simulator profiles')

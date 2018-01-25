@@ -25,6 +25,7 @@ close all
 
 % % Sac
 load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Sacramento/transformedSacDataV2.mat')
+load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Sacramento/SacDataV3.mat')
 zField = 'geoHeight';
 % hard-coded removal of far range data from pass 527
 for i = 10:17
@@ -34,9 +35,16 @@ simulated(6) = [];
 truth(6) = [];
 
 % % Po
+% load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Po/transformedPoData.mat')
+% zField = 'nHeight';
+% % % % hard-coded removal of far range data
+% simulated = trimFields(simulated,1:400);
+% truth = trimFields(truth,1:400);
+
+% % PoV2
 % load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Po/transformedPoDataV2.mat')
 % zField = 'nHeight';
-% % % hard-coded removal of far range data
+% % % % hard-coded removal of far range data
 % simulated(18:35) = trimFields(simulated(18:35),1:400);
 % truth(18:35) = trimFields(truth(18:35),1:400);
 
@@ -60,10 +68,8 @@ truth = trimFields(truth,nodeRng);
 %--------------------------------------------------------------------------
 nodePerReach = 25;
 reachVec = equiReach(range(nodeRng)+1,nodePerReach);
-for i = 1:length(simulated)
-    simulated(i).reach = reachVec;
-    truth(i).reach = reachVec;
-end
+[simulated.reach] = deal(reachVec);
+[truth.reach] = deal(reachVec);
 %--------------------------------------------------------------------------
 
 truthAllign = nodeAllign(truth);
@@ -125,7 +131,11 @@ for r = min(section):max(section)
 
     %inter quartile range approach.
     IQR = iqr(SVal);
-    iSV = find(SVal >= median(SVal) + 2*IQR,1,'last');
+    try
+        iSV(r) = find(SVal >= median(SVal) + 2*IQR,1,'last');
+    catch
+        iSV(r) = 1;
+    end
     
     %cumulative percent of sing. val. threshold.
 %     p = 0.5;
@@ -194,12 +204,12 @@ svdStats.reachZErr = reachAvgTruth - svdStats.reachAvgZ;
 %--------------------------------------------------------------------------
 
 %rothko section plot
-imagesc(observedBy .* section)
-xlabel('Profile')
-ylabel('Node')
-c = lines;
-c = c(1:max(section),:);
-colormap([1 1 1; c])
+% imagesc(observedBy .* section)
+% xlabel('Profile')
+% ylabel('Node')
+% c = lines;
+% c = c(1:max(section),:);
+% colormap([1 1 1; c])
 
 %singular values
 figure()
@@ -262,22 +272,22 @@ svdStats.slopeMAE = nanmean(abs(svdStats.slopeErr),1);
 simStats.slopeRMSE = sqrt(nanmean(simStats.slopeErr.^2,1));
 svdStats.slopeRMSE = sqrt(nanmean(svdStats.slopeErr.^2,1));
 
-simStats.slopeRRMSE = sqrt(nanmean(simStats.relSlopeErr.^2,1));
-svdStats.slopeRRMSE = sqrt(nanmean(svdStats.relSlopeErr.^2,1));
+simStats.slopeRRMSE = sqrt(nanmean(simStats.relSlopeErr.^2,1)).*100;
+svdStats.slopeRRMSE = sqrt(nanmean(svdStats.relSlopeErr.^2,1)).*100;
 
 figure()
-% bar([simStats.slopeMAE' svdStats.slopeMAE'] .* 10^5,1,'grouped')
-% bar([simStats.slopeRMSE' svdStats.slopeRMSE'] .* 10^5,1,'grouped')
-bar([simStats.slopeRRMSE' svdStats.slopeRRMSE'] .* 100,1,'grouped')
-ylabel('RRMSE (%)')
-xlabel('Profile Number')
+plot(simStats.slopeRRMSE', svdStats.slopeRRMSE','k.','MarkerSize',20)
+% plot(abs(simStats.relSlopeErr), abs(svdStats.relSlopeErr),'ko')
+grid on
+axis square
+axLim = get(gca,'XLim');
+axLim(1) = 0;
+hold on
+plot(axLim,axLim,'k-')
+set(gca,'XLim', axLim); set(gca,'YLim',axLim);
 title('Reach-level slope errors')
-legend('Original Data','Low Rank','Location','Northwest')
-%     c = lines;
-%     colormap(c(1:2,:))
-c = gray;
-colormap(c([10,40],:))
-
+xlabel('Simulated RRMSE(%)')
+ylabel('LRA RRMSE(%)')
 
 % reach elev. errors
 simStats.reachZMAE = nanmean(abs(simStats.reachZErr),1);
@@ -285,22 +295,20 @@ svdStats.reachZMAE = nanmean(abs(svdStats.reachZErr),1);
 
 simStats.reachZRMSE = sqrt(nanmean(simStats.reachZErr.^2,1));
 svdStats.reachZRMSE = sqrt(nanmean(svdStats.reachZErr.^2,1));
-figure()
-bar([simStats.reachZMAE' svdStats.reachZMAE'],1,'grouped')
-% bar([simStats.reachZRMSE' svdStats.reachZRMSE'],1,'grouped')
-ylabel('MAE (m)')
-xlabel('Profile Number')
-title('Reach-level elevation errors')
-legend('Original Data','Low Rank','Location','Northwest')
-%     c = lines;
-%     colormap(c(1:2,:))
-c = gray;
-colormap(c([10,40],:))
 
-% % R-mode analysis
-% R = V*S2;
-% figure()
-% plot(R(:,1),R(:,2),'r.','MarkerSize',24)
+figure()
+plot(simStats.reachZRMSE', svdStats.reachZRMSE','k.','MarkerSize',20)
+% plot(abs(simStats.reachZErr), abs(svdStats.reachZErr),'ko')
+grid on
+axis square
+axLim = get(gca,'YLim');
+% axLim(1) = 0;
+hold on
+plot(axLim,axLim,'k-')
+set(gca,'XLim', axLim); set(gca,'YLim',axLim);
+title('Reach-level elevation errors')
+xlabel('Simulated (m)')
+ylabel('LRA (m)')
 
 %--------------------------------------------------------------------------
 

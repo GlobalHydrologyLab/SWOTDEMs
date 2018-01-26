@@ -57,6 +57,10 @@ clear
 load('Po/transformedPoDataV2.mat')
 zField = 'nHeight';
 
+% % % hard-coded removal of far range data
+% simulated(18:35) = trimFields(simulated(18:35),1:400);
+% truth(18:35) = trimFields(truth(18:35),1:400);
+
 
 % range=1:3;
 % simulated = simulated(range);
@@ -64,18 +68,19 @@ zField = 'nHeight';
 
 %% trim near and far range
 nodeRange = [100;656];
+% nodeRange = [400:656];
 truth = trimFields(truth,nodeRange);
 simulated = trimFields(simulated,nodeRange);
 
 %% bias correction
-% simAllign = nodeAllign(simulated);
-% truthAllign = nodeAllign(truth);
-% profMask = ~isnan(simAllign.(zField));
-% 
-% for i = 1:length(simulated)
-%     bias(i) = nanmean(simAllign.(zField)(:,i) - truthAllign.(zField)(:,i));
-%     simulated(i).(zField) = simulated(i).(zField) - bias(i);
-% end
+simAllign = nodeAllign(simulated);
+truthAllign = nodeAllign(truth);
+profMask = ~isnan(simAllign.(zField));
+
+for i = 1:length(simulated)
+    bias(i) = nanmean(simAllign.(zField)(:,i) - truthAllign.(zField)(:,i));
+    simulated(i).(zField) = simulated(i).(zField) - bias(i);
+end
 
 %% try some clever averaging
 
@@ -114,6 +119,7 @@ knotZ = slmeval(slm.knots,slm);
 %% RMSEs
 RMSEslm = sqrt(mean((slmProf - truthAvg.(zField)).^2));
 MAEslm = mean(abs(slmProf - truthAvg.(zField)));
+MAEsim = mean(abs(simAvg.(zField) - truthAvg.(zField)));
 
 RMSEsimAvg = sqrt(mean((simAvg.(zField) - truthAvg.(zField)).^2));
 RMSEsmooth = sqrt(nanmean((simSmooth - truthAvg.nHeight).^2));
@@ -121,6 +127,37 @@ RMSEsmooth = sqrt(nanmean((simSmooth - truthAvg.nHeight).^2));
 % for i=1:length(simulated)
 %     RMSEsim(i,1) = sqrt(nanmean((simulated(i).(zField) - truth(i).(zField)).^2));
 % end
+
+%% Define reaches
+
+nodeRng = [min(simAllign.node(1,:)), max(simAllign.node(end,:))];
+nodePerReach = 25;
+reachVec = equiReach(range(nodeRng)+1,nodePerReach);
+
+[simulated.reach] = deal(reachVec);
+[truth.reach] = deal(reachVec);
+
+%% Reach stats
+reaches = unique(reachVec)';
+
+for r = reaches
+    inReach = reachVec == r;
+    RL(r) = range(simAvg.sCoord(inReach));
+    if sum(inReach)>=2
+        fitSim = polyfit(simAvg.sCoord(inReach), simAvg.(zField)(inReach),1);
+        fitSLM = polyfit(slm.x(inReach),slmProf(inReach),1);
+        
+        fitTruth = polyfit(truthAvg.sCoord(inReach), truthAvg.(zField)(inReach),1);
+
+        SimSlopeErr(r) = fitTruth(1) - fitSim(1);
+        SLMSlopeErr(r) = fitTruth(1) - fitSLM(1);
+        SimRelSlopeErr(r) = SimSlopeErr(r) / fitTruth(1) .*100;
+        SLMRelSlopeErr(r) = SLMSlopeErr(r) / fitTruth(1) .*100;
+    end
+end
+
+simRRMSE = sqrt(mean(SimRelSlopeErr.^2));
+SLMRRMSE = sqrt(mean(SLMRelSlopeErr.^2));
 
 
 %% plot things

@@ -48,12 +48,26 @@ srtm.rmBias = srtm.zInterp - srtm.bias;
 srtm.resid = srtm.rmBias - interpZ;
 srtm.std = nanstd(srtm.resid);
 
+%SLM profile
+load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Sacramento/SacSLMProfile.mat')
+slm.zInterp = interp1(slm.x,slmProf,interpS);
+slm.bias = nanmean(slm.zInterp - interpZ);
+slm.rmBias = slm.zInterp - slm.bias;
 
 
+% c = distinguishable_colors(5);
+% c = brewermap(
+% set(groot,'defaultAxesColorOrder',c)
 
-set(groot,'defaultAxesColorOrder',brewermap(7,'Set1'))
-plot(interpS,interpZ,'Linewidth',1);
+skm = interpS./1000;
+
 hold on
-plot(interpS,aster.rmBias, 'Linewidth',1);
-plot(interpS,ned.rmBias,'Linewidth',1);
-plot(interpS,srtm.rmBias,'Linewidth',1);
+plot(skm,aster.rmBias, 'Linewidth',1);
+plot(skm,ned.rmBias,'Linewidth',2);
+plot(skm,srtm.rmBias,'Linewidth',2);
+plot(skm,interpZ,'k','Linewidth',2.5);
+plot(skm,slm.rmBias,'Linewidth',2);
+legend('ASTER','NED','SRTM','GPS Profile','Simulated SWOT','Location','NorthEast')
+xlabel('Flow Distance (km)')
+ylabel('Elevation (m)')
+box on

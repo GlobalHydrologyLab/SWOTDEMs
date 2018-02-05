@@ -9,7 +9,7 @@
 % 
 % %load data
 % load('Sacramento/drawnCenterline.mat') %hand drawn centerline
-% load('Sacramento/SWOTSimData/SimTruthV2.mat') %swot sim data
+% load('Sacramento/SacDataV4.mat') %swot sim data
 % load('Sacramento/DEMProfiles/SRTM_drawnCenterline.mat') %SRTM
 % load('Sacramento/DEMProfiles/ASTER_drawnCenterline.mat') %ASTER
 % load('Sacramento/DEMProfiles/NED_drawnCenterline.mat') %NED
@@ -47,7 +47,7 @@
 % snCoord = xy2sn(centerlineOut(:,1:2), ... 
 %         [simulated(1).easting, simulated(1).northing],transParam);
 % xy2snAscendCheck(snCoord(:,1)); 
-
+% 
 % %----------------------------------------------------------------------
 % %because 0 turns to NaN in the xy2sn function. will not be right if
 % %centerline changes.
@@ -73,10 +73,10 @@
 %     boatProfile(i).nCoord = snCoord(:,2);
 %     
 % end
-% 
-% 
-% % % % % % % clearvars -except boatProfile drifter simulated SRTM ASTER NED transParam truth
-% % % % % % % save('Sacramento/transformedSacDataV2.mat')
+
+
+% % % % % % clearvars -except boatProfile drifter simulated SRTM ASTER NED transParam truth
+% % % % % % save('Sacramento/transformedSacDataV2.mat')
 
 %% Load transformed data from last section
 %coordinate transformation is very slow 
@@ -84,10 +84,8 @@ tic
 clear
 close all
 
-% load('Sacramento/transformedSacDataV2.mat')
-load('Sacramento/SacDataV3.mat')
-
-load('Sacramento/SacDataV3.mat')
+load('Sacramento/transformedSacDataV2.mat')
+load('Sacramento/SacDataV4.mat')
 zField = 'geoHeight';
 
 %% cleaning up pass 527
@@ -224,7 +222,7 @@ SLMRRMSE = sqrt(mean(SLMRelSlopeErr.^2));
 close all
 
 
-for i = 1;
+while false
 % figure(1)
 % hold on
 % title('pass 249')

@@ -15,19 +15,16 @@
 % - make sure # of singular values chosen is providing best results.
 %
 % - General cleaning of code.
-%
-% - reimagine error summary plots. Bar graph is good up to about ~15 groups
-%        on the x-axis, then it becomes difficult to read.
 %--------------------------------------------------------------------------
 
 clear
 close all
 
 % % Sac
-load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Sacramento/transformedSacDataV2.mat')
-load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Sacramento/SacDataV3.mat')
+% load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Sacramento/SacDataV3.mat')
+load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Sacramento/SacDataV4.mat')
 zField = 'geoHeight';
-% hard-coded removal of far range data from pass 527
+% % hard-coded removal of far range data from pass 527
 for i = 10:17
     simulated(i).geoHeight(339:487) = NaN;
 end
@@ -51,6 +48,9 @@ truth(6) = [];
 % % Tanana
 % load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Tanana/transformedTananaData.mat')
 % zField = 'nHeight';
+% 
+
+
 
 clearvars -except simulated truth zField
 
@@ -278,13 +278,7 @@ svdStats.slopeRRMSE = sqrt(nanmean(svdStats.relSlopeErr.^2,1)).*100;
 figure()
 plot(simStats.slopeRRMSE', svdStats.slopeRRMSE','k.','MarkerSize',20)
 % plot(abs(simStats.relSlopeErr), abs(svdStats.relSlopeErr),'ko')
-grid on
-axis square
-axLim = get(gca,'XLim');
-axLim(1) = 0;
-hold on
-plot(axLim,axLim,'k-')
-set(gca,'XLim', axLim); set(gca,'YLim',axLim);
+scatter1to1();
 title('Reach-level slope errors')
 xlabel('Simulated RRMSE(%)')
 ylabel('LRA RRMSE(%)')
@@ -299,13 +293,7 @@ svdStats.reachZRMSE = sqrt(nanmean(svdStats.reachZErr.^2,1));
 figure()
 plot(simStats.reachZRMSE', svdStats.reachZRMSE','k.','MarkerSize',20)
 % plot(abs(simStats.reachZErr), abs(svdStats.reachZErr),'ko')
-grid on
-axis square
-axLim = get(gca,'YLim');
-% axLim(1) = 0;
-hold on
-plot(axLim,axLim,'k-')
-set(gca,'XLim', axLim); set(gca,'YLim',axLim);
+scatter1to1();
 title('Reach-level elevation errors')
 xlabel('Simulated (m)')
 ylabel('LRA (m)')

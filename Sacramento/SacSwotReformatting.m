@@ -5,7 +5,7 @@
 clear
 
 %find shapefiles in the directory
-k = dir('/Users/Ted/Documents/Sacramento/SacramentoProductShapeFiles_2.0/*.shp'); 
+k = dir('/Users/Ted/Documents/MATLAB/SWOTDEMs/Sacramento/SWOTSimData/shapefiles/*.shp'); 
 fileName = {k.name}';
 
 
@@ -62,4 +62,4 @@ for i = 1 : length(fileName)
     
 end
 
-% clearvars -except simulated truth
+clearvars -except simulated truth

@@ -1,18 +1,19 @@
-% SVD_multiSect_varReach.m
-% Extending idea of SVD application to reduce errors in each profile
-% individually to work for full river profiles instead of subsections.
-% Reaches are defined by equiReach.m, which takes in total number of nodes
-% and desired number of nodes per reach.
+% SVD_multiSect_varReach.m Extending idea of SVD application to reduce
+% errors in each profile individually to work for full river profiles
+% instead of subsections. Reaches are defined by equiReach.m, which defines
+% reaches only based on making them similar in length. 
 
 %--------------------------------------------------------------------------
 % TO DO:
 %--------------------------------------------------------------------------
-% - look into removing erroneous data from orbit 527 before SVD. The large
-%       (and obvious) errors can dominate the decomposition results and
-%       make comparisons of errors kind of disingenuous.
-% X-- Hard-coded removal for now. I think this is fine. 
+% - look into removing erroneous data from Sacramento orbit 527 before SVD.
+%       The large (and obvious) errors can dominate the decomposition
+%       results and make comparisons of errors kind of disingenuous.
+% x-- Hard-coded removal for now. I think this is fine.
 %
 % - make sure # of singular values chosen is providing best results.
+%
+% - merge residual and noResid versions using switch.
 %
 %--------------------------------------------------------------------------
 
@@ -24,6 +25,7 @@ targetRLkm = 10;
 % river = 'Sac';
 % river = 'Po';
 % river = 'PoV2';
+% river = 'PoV3';
 river = 'Tanana';
 
 switch river
@@ -50,6 +52,10 @@ switch river
         % % % hard-coded removal of far range data
         simulated(18:35) = trimFields(simulated(18:35),1:400);
         truth(18:35) = trimFields(truth(18:35),1:400);
+        
+    case 'PoV3'
+        load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Po/transformedPo_3Pass.mat')
+        zField = 'nHeight';
 
     case 'Tanana'
         load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Tanana/transformedTananaData.mat')
@@ -140,8 +146,10 @@ for r = min(section):max(section)
     end
     
     %cumulative percent of sing. val. threshold.
-%     p = 0.5;
-%     iSV = find(cumsum(S)./sum(S) >= p,1,'first')
+%     p = 0.8;
+%     iSV(r) = find(cumsum(SVal)./sum(SVal) >= p,1,'first');
+
+    iSV(r) = 2;
     %----------------------------------------------------------------------
 
     %now modify S, removing smaller components.
@@ -187,11 +195,11 @@ for r = reaches
     RL(r) = range(skm(reachVec==r));
     for p = 1:nProf
         inReach = reachVec == r & ~isnan(z2All(:,p));
-        if sum(inReach)>=2
+        if sum(inReach)>= 0.9*sum(reachVec==r)
             fitSim = polyfit(sAll(inReach,p),zAll(inReach,p),1);
             fitSVD = polyfit(sAll(inReach,p),z2All(inReach,p),1);
 
-            inReach = truth(p).reach == r;
+            inReach = truth(p).reach == r & ~isnan(truthAllign.sCoord(:,p));
             fitTruth = polyfit(truthAllign.sCoord(inReach,p), ... 
                 truthAllign.(zField)(inReach,p),1);
             
@@ -222,12 +230,13 @@ svdStats.reachZErr = reachAvgTruth - svdStats.reachAvgZ;
 %--------------------------------------------------------------------------
 
 %rothko section plot
-% imagesc(observedBy .* section)
-% xlabel('Profile')
-% ylabel('Node')
-% c = lines;
-% c = c(1:max(section),:);
-% colormap([1 1 1; c])
+figure()
+imagesc(observedBy .* section)
+xlabel('Profile')
+ylabel('Node')
+c = lines;
+c = c(1:max(section),:);
+colormap([1 1 1; c])
 
 %singular values
 figure()
@@ -241,21 +250,21 @@ handle = figure();
 subplot(2,1,1);
 plot(skm,zArray)
 hold on
-plot(skm,truth(3).(zField),'k','Linewidth',2)
+plot(skm,truthAllign.(zField)(:,3),'k','Linewidth',2)
 xlabel('Flow Distance (km)')
 ylabel('Elevation (m)')
-title('Original Simulated Profiles')
+title('Original Simulation')
 
 subplot(2,1,2);
 plot(skm,z2All)
 hold on
-plot(skm,truth(3).(zField),'k','Linewidth',2)
+plot(skm,truthAllign.(zField)(:,3),'k','Linewidth',2)
 xlabel('Flow Distance (km)')
 ylabel('Elevation (m)')
-title('Low-Rank Approximation Profiles')
+title('Low-Rank Approximation')
 
 for r = reaches
-    ir = find(reachVec == r,1,'first');
+    ir = find(reachVec == r,1,'last');
     xr(r) = skm(ir);
     yr(r) = truthAllign.(zField)(ir,3);
 end
@@ -266,7 +275,7 @@ scatter(xr,yr, 100, reaches,'filled')
 
 allAxes = findobj(handle, 'type', 'axes');
 linkaxes(allAxes);
-set(gcf,'Units','normalized','Position', [0.2, 0.1, 0.6, 0.9])
+set(gcf,'Units','normalized','Position',[0.013672 0.013194 0.59922 0.91528])
 
 
 
@@ -280,47 +289,49 @@ set(gcf,'Units','normalized','Position', [0.2, 0.1, 0.6, 0.9])
 % legend('Original Data','Low Rank')
 
 % reach slope errors
-simStats.slopeMAE = nanmean(abs(simStats.slopeErr),2);
-svdStats.slopeMAE = nanmean(abs(svdStats.slopeErr),2);
+plotDim = 2; %1 is summary for each day. 2 is each reach.
+simStats.slopeMAE = nanmean(abs(simStats.slopeErr),plotDim);
+svdStats.slopeMAE = nanmean(abs(svdStats.slopeErr),plotDim);
 
-simStats.slopeRMSE = sqrt(nanmean(simStats.slopeErr.^2,2));
-svdStats.slopeRMSE = sqrt(nanmean(svdStats.slopeErr.^2,2));
+simStats.slopeRMSE = sqrt(nanmean(simStats.slopeErr.^2,plotDim));
+svdStats.slopeRMSE = sqrt(nanmean(svdStats.slopeErr.^2,plotDim));
 
-simStats.slopeRRMSE = sqrt(nanmean(simStats.relSlopeErr.^2,2)).*100;
-svdStats.slopeRRMSE = sqrt(nanmean(svdStats.relSlopeErr.^2,2)).*100;
+simStats.slopeRRMSE = sqrt(nanmean(simStats.relSlopeErr.^2,plotDim)).*100;
+svdStats.slopeRRMSE = sqrt(nanmean(svdStats.relSlopeErr.^2,plotDim)).*100;
 
-simStats.slopeRMAE = nanmean(abs(simStats.relSlopeErr),2).*100;
-svdStats.slopeRMAE = nanmean(abs(svdStats.relSlopeErr),2).*100;
+simStats.slopeRMAE = nanmean(abs(simStats.relSlopeErr),plotDim).*100;
+svdStats.slopeRMAE = nanmean(abs(svdStats.relSlopeErr),plotDim).*100;
 
 figure()
+nCol = 1:numel(simStats.slopeMAE);
 subplot(2,2,1)
-scatter(simStats.slopeMAE, svdStats.slopeMAE,[],reaches,'filled')
+scatter(simStats.slopeMAE, svdStats.slopeMAE,[],nCol,'filled')
 scatter1to1(gca,'origin');
 xlabel('Simulated MAE(cm/km)')
 ylabel('LRA MAE(cm/km)')
 title('MAE')
 
 subplot(2,2,2)
-scatter(simStats.slopeRMAE, svdStats.slopeRMAE,[],reaches,'filled')
-scatter1to1(gca,'origin');
-xlabel('Simulated RMAE(%)')
-ylabel('LRA RMAE(%)')
-title('RMAE')
-
-subplot(2,2,3)
-scatter(simStats.slopeRMSE, svdStats.slopeRMSE,[],reaches,'filled')
+scatter(simStats.slopeRMSE, svdStats.slopeRMSE,[],nCol,'filled')
 scatter1to1(gca,'origin');
 xlabel('Simulated RMSE(cm/km)')
 ylabel('LRA RMSE(cm/km)')
 title('RMSE')
 
+subplot(2,2,3)
+ksdensity(simStats.slopeErr(:))
+hold on
+ksdensity(svdStats.slopeErr(:))
+legend('original','LRA')
+
 subplot(2,2,4)
-% plot(simStats.slopeRRMSE, svdStats.slopeRRMSE,'k.','MarkerSize',20)
-scatter(simStats.slopeRRMSE, svdStats.slopeRRMSE,[],reaches,'filled')
+scatter(simStats.slopeRRMSE, svdStats.slopeRRMSE,[],nCol,'filled')
 scatter1to1(gca,'origin');
 xlabel('Simulated RRMSE(%)')
-ylabel('LRA RRMSE(%)')
+ylabel('LRA RRMSE()')
 title('RRMSE')
+
+set(gcf,'Units','Normalized','Position',[0.58008 0.21389 0.37461 0.55833])
 
 % reach elev. errors
 % simStats.reachZMAE = nanmean(abs(simStats.reachZErr),1);

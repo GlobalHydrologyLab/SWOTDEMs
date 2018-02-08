@@ -102,13 +102,14 @@ prescription = slmset('Decreasing','on','Verbosity',1,'Weights',simAvg.normWeigh
 % notNaN = ~isnan(simAvg.sCoord); %slm removes these
 
 % simAvg = trimFields(simAvg, notNaN);
-[~,iKnots] = slidePeaks(simAvg.nWidth,0.10,0);
+[~,iKnots] = slidePeaks(simAvg.nWidth,0.05,0);
 
 locKnots = simAvg.sCoord(iKnots); %s-coordinate location for knots
 locKnots(isnan(locKnots)) = []; %delete NaNs
 locKnots = [min(simAvg.sCoord); locKnots; max(simAvg.sCoord)];
 
 prescription.Knots = locKnots;
+% prescription.Knots = 120;
 slm = slmengine(simAvg.sCoord, simAvg.(zField), prescription);
 slmProf = slmeval(slm.x,slm);  %evaluate
 knotZ = slmeval(slm.knots,slm);
@@ -131,7 +132,7 @@ RMSEsmooth = sqrt(nanmean((simSmooth - truthAvg.nHeight).^2));
 %% Define reaches
 
 nodeRng = [min(simAllign.node(1,:)), max(simAllign.node(end,:))];
-nodePerReach = 25;
+nodePerReach = 50;
 reachVec = equiReach(range(nodeRng)+1,nodePerReach);
 
 [simulated.reach] = deal(reachVec);
@@ -161,16 +162,30 @@ SLMRRMSE = sqrt(mean(SLMRelSlopeErr.^2));
 
 
 %% plot things
-% close all
+close all
+
+minS = truthAvg.sCoord(1);
 
 figure()
 plot(truthAvg.sCoord/1000,truthAvg.(zField),'k-','Linewidth',2)
 hold on
-plot(simAvg.sCoord/1000,simAvg.(zField),'b-','Linewidth',1)
-plot(slm.x/1000,slmProf,'r-','LineWidth',2) %slm profile
+% plot(simAvg.sCoord/1000,simAvg.(zField),'b-','Linewidth',1)
+plot(slm.x/1000,slmProf,'r-','LineWidth',1.5) %slm profile
 % plot(slm.knots/1000,knotZ,'b*','MarkerFaceColor','b')
+
+sr(1) = minS;
+zr(1) = truthAvg.(zField)(1);
+for r = reaches
+    ir = find(reachVec == r,1,'last');
+    sr(r+1) = truthAvg.sCoord(ir);
+    zr(r+1) = truthAvg.(zField)(ir); 
+end
+plot(sr./1000, zr, 'b*', 'MarkerSize', 10, 'LineWidth', 1.5)
+
 xlabel('Flow distance (km)')
 ylabel('Elevation (m)')
+legend('Simulator input','Processed output','~10km markers')
+title('Po River Profile')
 hold off
 
 % set(gcf,'Units','normalized','Position', [0.3, 0.2, 0.5, 0.6])

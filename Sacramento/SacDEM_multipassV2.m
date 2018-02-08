@@ -159,7 +159,7 @@ truthSmooth = smooth(truthAvg.sCoord, truthAvg.geoHeight, 5, 'moving');
 %low/high slope areas also have different widths, so placing knots at the
 %peaks in widths will approximate the low/high slope sequence interval.
 
-prescription = slmset('Decreasing','on','Verbosity',1,'Weights',simAvg.normWeight);
+prescription = slmset('Decreasing','on','Verbosity',0,'Weights',simAvg.normWeight);
 
 [~,iKnots] = slidePeaks(simAvg.nWidth,0.10,0);
 
@@ -189,7 +189,7 @@ end
 %% Define reaches
 
 nodeRng = [min(simAllign.node(1,:)), max(simAllign.node(end,:))];
-nodePerReach = 25;
+nodePerReach = 100;
 reachVec = equiReach(range(nodeRng)+1,nodePerReach);
 
 [simulated.reach] = deal(reachVec);
@@ -279,13 +279,24 @@ hold on
 % plot(truthAvg.sCoord/1000,truthAvg.geoHeight,'LineWidth',2) %averaged input profile
 % plot(truth(1).sCoord/1000,[truth.geoHeight])
 plot(truthAvg.sCoord/1000,truthAvg.geoHeight,'k','LineWidth',2) %averaged input profile
-plot(simAvg.sCoord/1000,simAvg.geoHeight,'b-','LineWidth',1)
-plot(slm.x/1000,slmProf,'r-','LineWidth',2) %slm profile
+% plot(simAvg.sCoord/1000,simAvg.geoHeight,'b-','LineWidth',1)
+plot(slm.x/1000,slmProf,'r-','LineWidth',1.5) %slm profile
 
-legend('Simulator input node median','Constrained weighted spline')
-title('Median SWOT simulator profiles')
+minS = truthAvg.sCoord(1);
+sr(1) = minS;
+zr(1) = truthAvg.(zField)(1);
+for r = reaches
+    ir = find(reachVec == r,1,'last');
+    sr(r+1) = truthAvg.sCoord(ir);
+    zr(r+1) = truthAvg.(zField)(ir); 
+end
+plot(sr./1000, zr, 'b*', 'MarkerSize', 10, 'LineWidth', 1.5)
+
+legend('Simulator input','Processed Output','~20km markers')
+title('Sacramento River Profile')
 xlabel('Flow distance (km)')
 ylabel('Elevation (m)')
+box on
 
 % for i = 1:length(boatProfile)
 %     plot(boatProfile(i).sCoord/1000,boatProfile(i).height+29)

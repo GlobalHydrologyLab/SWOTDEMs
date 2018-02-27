@@ -1,23 +1,24 @@
 %% PoDEM_multipass.m 
 %open SWOT simulator and DEM sampled profiles of the Po River, transform to
 %s,n coordinates and compare.
-% 
+
+
+%% transform
 % clear
 % 
 % %using Legleiter xy2sn.m conversion function
-% addpath('cited_functions/riverKrige');
+% addpath('/Users/Ted/Documents/MATLAB/cited_functions/riverKrige');
 % 
 % %load data
-% load('/Users/Ted/Documents/MATLAB/Po/PoSimulatorDataV2.mat')
+% % load('/Users/Ted/Documents/MATLAB/Po/PoSimulatorDataV2.mat')
+% load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Po/PoSim_3Pass.mat')
 % 
-% 
-% %% transform
 % 
 % % transParam = [3 3 31 length(SRTM) 200]'; 
 % transParam = [1 3 5 length([truth(1).easting]) 500]'; %for swot sim centerline
 % 
 % %quick way to change reference cetnerline
-% centerline = [truth(1).easting,truth(1).northing];
+% centerline = avgNodeCenter;
 % 
 % 
 % %----------------------------------------------------------------------
@@ -54,7 +55,8 @@
 clear
 % close all
 
-load('Po/transformedPoDataV2.mat')
+load('Po/transformedPo_3Pass.mat')
+% load('Po/transformedPoDataV2.mat')
 zField = 'nHeight';
 
 % % % hard-coded removal of far range data
@@ -67,10 +69,10 @@ zField = 'nHeight';
 % truth = truth(range);
 
 %% trim near and far range
-nodeRange = [100;656];
+% nodeRange = [100;656];
 % nodeRange = [400:656];
-truth = trimFields(truth,nodeRange);
-simulated = trimFields(simulated,nodeRange);
+% truth = trimFields(truth,nodeRange);
+% simulated = trimFields(simulated,nodeRange);
 
 %% bias correction
 simAllign = nodeAllign(simulated);
@@ -132,8 +134,8 @@ RMSEsmooth = sqrt(nanmean((simSmooth - truthAvg.nHeight).^2));
 %% Define reaches
 
 nodeRng = [min(simAllign.node(1,:)), max(simAllign.node(end,:))];
-nodePerReach = 50;
-reachVec = equiReach(range(nodeRng)+1,nodePerReach);
+targetRLkm = 10;
+reachVec = equiReach(slm.x./1000,targetRLkm);
 
 [simulated.reach] = deal(reachVec);
 [truth.reach] = deal(reachVec);
@@ -150,8 +152,8 @@ for r = reaches
         
         fitTruth = polyfit(truthAvg.sCoord(inReach), truthAvg.(zField)(inReach),1);
 
-        SimSlopeErr(r) = fitTruth(1) - fitSim(1);
-        SLMSlopeErr(r) = fitTruth(1) - fitSLM(1);
+        SimSlopeErr(r) = fitTruth(1) - fitSim(1) .*100000;
+        SLMSlopeErr(r) = fitTruth(1) - fitSLM(1) .*100000;
         SimRelSlopeErr(r) = SimSlopeErr(r) / fitTruth(1) .*100;
         SLMRelSlopeErr(r) = SLMSlopeErr(r) / fitTruth(1) .*100;
     end

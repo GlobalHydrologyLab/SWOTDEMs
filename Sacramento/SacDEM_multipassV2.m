@@ -85,7 +85,7 @@ clear
 close all
 
 load('Sacramento/transformedSacDataV2.mat')
-load('Sacramento/SacDataV4.mat')
+% load('Sacramento/SacDataV4.mat')
 zField = 'geoHeight';
 
 %% cleaning up pass 527
@@ -94,31 +94,31 @@ zField = 'geoHeight';
 % identified by having NaN value for nWidth, so all fields with nWidth =
 % NaN are effectively deleted here. Set to NaN for array size continuity.
 
-% for i = 1:length(truth)
-%     %true where widths are missing or height is default -9999 value.
-%     iBadHeight = isnan(truth(i).nWidth) | truth(i).geoHeight == -9999; 
-%     
-%     simulated(i).reach(iBadHeight) = NaN;
-%     simulated(i).node(iBadHeight) = NaN;
-%     simulated(i).easting(iBadHeight) = NaN;
-%     simulated(i).northing(iBadHeight) = NaN;
-%     simulated(i).nHeight(iBadHeight) = NaN;
-%     simulated(i).nWidth(iBadHeight) = NaN;
-%     simulated(i).geoHeight(iBadHeight) = NaN;
-%     simulated(i).sCoord(iBadHeight) = NaN; 
-%     simulated(i).nCoord(iBadHeight) = NaN;
-%     
-%     
-%     truth(i).reach(iBadHeight) = NaN;
-%     truth(i).node(iBadHeight) = NaN;
-%     truth(i).easting(iBadHeight) = NaN;
-%     truth(i).northing(iBadHeight) = NaN;
-%     truth(i).nHeight(iBadHeight) = NaN;
-%     truth(i).nWidth(iBadHeight) = NaN;
-%     truth(i).geoHeight(iBadHeight) = NaN;
-%     truth(i).sCoord(iBadHeight) = NaN; 
-%     truth(i).nCoord(iBadHeight) = NaN;
-% end
+for i = 1:length(truth)
+    %true where widths are missing or height is default -9999 value.
+    iBadHeight = isnan(truth(i).nWidth) | truth(i).geoHeight == -9999; 
+    
+    simulated(i).reach(iBadHeight) = NaN;
+    simulated(i).node(iBadHeight) = NaN;
+    simulated(i).easting(iBadHeight) = NaN;
+    simulated(i).northing(iBadHeight) = NaN;
+    simulated(i).nHeight(iBadHeight) = NaN;
+    simulated(i).nWidth(iBadHeight) = NaN;
+    simulated(i).geoHeight(iBadHeight) = NaN;
+    simulated(i).sCoord(iBadHeight) = NaN; 
+    simulated(i).nCoord(iBadHeight) = NaN;
+    
+    
+    truth(i).reach(iBadHeight) = NaN;
+    truth(i).node(iBadHeight) = NaN;
+    truth(i).easting(iBadHeight) = NaN;
+    truth(i).northing(iBadHeight) = NaN;
+    truth(i).nHeight(iBadHeight) = NaN;
+    truth(i).nWidth(iBadHeight) = NaN;
+    truth(i).geoHeight(iBadHeight) = NaN;
+    truth(i).sCoord(iBadHeight) = NaN; 
+    truth(i).nCoord(iBadHeight) = NaN;
+end
 
 
 %% bias correction
@@ -188,9 +188,9 @@ end
  
 %% Define reaches
 
-nodeRng = [min(simAllign.node(1,:)), max(simAllign.node(end,:))];
-nodePerReach = 100;
-reachVec = equiReach(range(nodeRng)+1,nodePerReach);
+% nodeRng = [min(simAllign.node(1,:)), max(simAllign.node(end,:))];
+targetRL = 10;
+reachVec = equiReach(truthAvg.sCoord./1000,targetRL);
 
 [simulated.reach] = deal(reachVec);
 [truth.reach] = deal(reachVec);
@@ -207,8 +207,8 @@ for r = reaches
         
         fitTruth = polyfit(truthAvg.sCoord(inReach), truthAvg.(zField)(inReach),1);
 
-        SimSlopeErr(r) = fitTruth(1) - fitSim(1);
-        SLMSlopeErr(r) = fitTruth(1) - fitSLM(1);
+        SimSlopeErr(r) = (fitTruth(1) - fitSim(1)) .*100000;
+        SLMSlopeErr(r) = (fitTruth(1) - fitSLM(1)) .*100000;
         SimRelSlopeErr(r) = SimSlopeErr(r) / fitTruth(1) .*100;
         SLMRelSlopeErr(r) = SLMSlopeErr(r) / fitTruth(1) .*100;
     end
@@ -273,7 +273,7 @@ end
 % pbaspect([4 3 1])
 
 
-figure()
+% figure()
 hold on
 % plot(simAvg.sCoord/1000,simAvg.geoHeight,'LineWidth',2) %averaged output profile
 % plot(truthAvg.sCoord/1000,truthAvg.geoHeight,'LineWidth',2) %averaged input profile
@@ -290,9 +290,9 @@ for r = reaches
     sr(r+1) = truthAvg.sCoord(ir);
     zr(r+1) = truthAvg.(zField)(ir); 
 end
-plot(sr./1000, zr, 'b*', 'MarkerSize', 10, 'LineWidth', 1.5)
+plot(sr./1000, zr, 'b.', 'MarkerSize', 20)
 
-legend('Simulator input','Processed Output','~20km markers')
+legend('Simulator input','Processed Output','~10km reaches')
 title('Sacramento River Profile')
 xlabel('Flow distance (km)')
 ylabel('Elevation (m)')
@@ -305,5 +305,5 @@ box on
 % set(gcf,'Units','normalized','Position', [0.3, 0.2, 0.5, 0.6])
 
 hold off
-
-toc
+% 
+% toc

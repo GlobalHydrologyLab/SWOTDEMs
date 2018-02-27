@@ -17,21 +17,23 @@
 %
 %--------------------------------------------------------------------------
 
-clear
+% clear
 close all
 
 targetRLkm = 10;
-sectMin = 25;
-rmResidOpt = 1;
+sectMin = 30;
+rmResidOpt = 0;
+k = 2; 
 
-% river = 'Sac';
-% river = 'Po';
-% river = 'PoV2';
-% river = 'PoV3';
-river = 'Tanana';
+% river = 'Sacramento';
+river = 'Po';
+% river = 'Tanana';
+
+% river = 'PoV1';
+% river = 'PoV2'
 
 switch river
-    case 'Sac'
+    case 'Sacramento'
         load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Sacramento/SacDataV4.mat')
         zField = 'geoHeight';
         % % hard-coded removal of far range data from pass 527
@@ -40,8 +42,20 @@ switch river
         end
         simulated(6) = [];
         truth(6) = [];
-
+        
     case 'Po'
+        load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Po/transformedPo_3Pass.mat')
+        zField = 'nHeight';
+        simulated(1:17) = trimFields(simulated(1:17),205:400);
+        truth(1:17) = trimFields(truth(1:17),205:400);
+
+    case 'Tanana'
+        load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Tanana/transformedTananaData.mat')
+        zField = 'nHeight';
+        simulated = trimFields(simulated,99:829);
+        truth = trimFields(truth,99:829);
+
+    case 'PoV1'
         load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Po/transformedPoData.mat')
         zField = 'nHeight';
         % % % hard-coded removal of far range data
@@ -54,20 +68,10 @@ switch river
         % % % hard-coded removal of far range data
         simulated(18:35) = trimFields(simulated(18:35),1:400);
         truth(18:35) = trimFields(truth(18:35),1:400);
-        
-    case 'PoV3'
-        load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Po/transformedPo_3Pass.mat')
-        zField = 'nHeight';
-
-    case 'Tanana'
-        load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Tanana/transformedTananaData.mat')
-        zField = 'nHeight';
-        simulated = trimFields(simulated,99:829);
-        truth = trimFields(truth,99:829);
 end
 
 
-clearvars -except simulated truth zField targetRLkm sectMin rmResidOpt
+% clearvars -except simulated truth zField targetRLkm sectMin rmResidOpt river
 
 
 %Group data into matrices without gaps, intelligently deleting data so that
@@ -101,8 +105,8 @@ for r = min(section):max(section)
     truthReach = trimFields(truthAllign,inSect);
     
     %assemble full rectangular matrices of s,z data 
-%     z = zArray(inSect,:);
-    z = truthAllign.(zField)(inSect,:);
+    z = zArray(inSect,:);
+%     z = truthAllign.(zField)(inSect,:);
     [z, delCol] = nanRows(z,2);
     s = simAllign.sCoord(inSect,~delCol);
 
@@ -123,6 +127,8 @@ for r = min(section):max(section)
         %SVD on residuals
         zhat = polyval(m,s,[],mu);
         zresid = reshape(z-zhat, [], nProfSect);
+        ztrans = min(zresid(:));
+        zresid = zresid - ztrans;
 
         [U,S,V] = svd(zresid);
     else
@@ -131,41 +137,22 @@ for r = min(section):max(section)
     
     %----------------------------------------------------------------------
     % Determine best rank 
+    % this section should be improved.
     %----------------------------------------------------------------------
     SVal = diag(S);
-    
-    % WORKING IDEAS:
-    
-    %largest decrease in magnitude
-%     [~,iSV] = min(diff(S));
-
-    %inter quartile range approach.
-    IQR = iqr(SVal);
-    try
-        iSV(r) = find(SVal >= median(SVal) + 2*IQR,1,'last');
-    catch
-        iSV(r) = 1; %catch 0 evaluation
-    end
-    
-    %cumulative percent of sing. val. threshold.
-    p = 0.99;
-    iSV(r) = find(cumsum(SVal)./sum(SVal) >= p,1,'first');
-
-%     iSV(r) = 2;
+    iSV(r) = k;
     %----------------------------------------------------------------------
 
     %now modify S, removing smaller components.
-    S2 = S;
-    S2(iSV+1:end,:) = 0;
+    z2 = SVRecomp(U,S,V,1:iSV(r));
     
     %recombine
     if rmResidOpt
-        z2All(inSect,~delCol) = U*S2*V' + zhat;
-    else
-        z2All(inSect,~delCol) = U*S2*V';
+        z2 = U*S2*V' + zhat + ztrans;
     end
   
-    % join section data for later comparison   
+    % join section data for later comparison  
+    z2All(inSect,~delCol) = z2;
     sAll(inSect,~delCol) = s;
 end
 
@@ -190,8 +177,8 @@ simStats.slope = nan(length(reaches),nProf);
 simStats.slopeErr = nan(length(reaches),nProf);
 simStats.relSlopeErr = nan(length(reaches),nProf);
 simStats.reachAvgZ = nan(length(reaches),nProf);
-
 svdStats = simStats;
+
 reachAvgTruth = nan(length(reaches),nProf);
 truthSlope = nan(length(reaches),nProf);
 
@@ -242,7 +229,7 @@ svdStats.reachZErr = reachAvgTruth - svdStats.reachAvgZ;
 % c = c(1:max(section),:);
 % colormap([1 1 1; c])
 
-%coverage/elevation plot
+% %coverage/elevation plot
 figure()
 imAlpha=ones(size(zAll));
 imAlpha(isnan(zAll))=0;
@@ -252,17 +239,19 @@ set(gca,'color',0*[1 1 1]);
 
 %singular values
 figure()
-bar(diag(S))
+bar(SVal)
 xlabel('Singular Value Number')
 ylabel('Singular Value Magnitude')
-title('Singular Values of Elevation Residuals')
-if ~rmResidOpt; set(gca,'YScale','log'); end
+% title('Singular Values of Elevation Residuals')
+title(['Singular Values - ' sprintf(river)]);
+set(gca,'YScale','log');
+set(gcf,'Position',[1000 987 862 351]);
 
 %original and approx profiles
 handle = figure();
 subplot(2,1,1);
-% plot(skm,zArray)
-plot(skm,truthAllign.(zField))
+plot(skm,zArray)
+% plot(skm,truthAllign.(zField))
 hold on
 plot(skm,truthAllign.(zField)(:,3),'k','Linewidth',2)
 xlabel('Flow Distance (km)')
@@ -277,15 +266,15 @@ xlabel('Flow Distance (km)')
 ylabel('Elevation (m)')
 title('Low-Rank Approximation')
 
-for r = reaches
-    ir = find(reachVec == r,1,'last');
-    xr(r) = skm(ir);
-    yr(r) = truthAllign.(zField)(ir,3);
-end
-subplot(2,1,1)
-scatter(xr,yr, 100, reaches,'filled')
-subplot(2,1,2)
-scatter(xr,yr, 100, reaches,'filled')
+% for r = reaches
+%     ir = find(reachVec == r,1,'last');
+%     xr(r) = skm(ir);
+%     yr(r) = truthAllign.(zField)(ir,3);
+% end
+% subplot(2,1,1)
+% scatter(xr,yr, 100, reaches,'filled')
+% subplot(2,1,2)
+% scatter(xr,yr, 100, reaches,'filled')
 
 allAxes = findobj(handle, 'type', 'axes');
 linkaxes(allAxes);
@@ -301,6 +290,7 @@ set(gcf,'Units','normalized','Position',[0.013672 0.013194 0.59922 0.91528])
 % legend('Original Data','Low Rank')
 
 % reach slope errors
+figure()
 plotDim = 2; %1 is summary for each day. 2 is each reach.
 simStats.slopeMAE = nanmean(abs(simStats.slopeErr),plotDim);
 svdStats.slopeMAE = nanmean(abs(svdStats.slopeErr),plotDim);
@@ -314,7 +304,7 @@ svdStats.slopeRRMSE = sqrt(nanmean(svdStats.relSlopeErr.^2,plotDim)).*100;
 simStats.slopeRMAE = nanmean(abs(simStats.relSlopeErr),plotDim).*100;
 svdStats.slopeRMAE = nanmean(abs(svdStats.relSlopeErr),plotDim).*100;
 
-figure()
+% figure()
 nCol = 1:numel(simStats.slopeMAE);
 subplot(2,2,1)
 scatter(simStats.slopeMAE, svdStats.slopeMAE,[],nCol,'filled')
@@ -322,7 +312,7 @@ scatter1to1(gca,'origin');
 xlabel('Simulated MAE(cm/km)')
 ylabel('LRA MAE(cm/km)')
 title('MAE')
-
+% 
 subplot(2,2,2)
 scatter(simStats.slopeRMSE, svdStats.slopeRMSE,[],nCol,'filled')
 scatter1to1(gca,'origin');
@@ -343,7 +333,7 @@ legend('original','LRA')
 % ylabel('LRA RRMSE()')
 % title('RRMSE')
 
-set(gcf,'Units','Normalized','Position',[0.58008 0.21389 0.37461 0.55833])
+% set(gcf,'Units','Normalized','Position',[0.58008 0.21389 0.37461 0.55833])
 
 % reach elev. errors
 % simStats.reachZMAE = nanmean(abs(simStats.reachZErr),1);
@@ -360,6 +350,42 @@ set(gcf,'Units','Normalized','Position',[0.58008 0.21389 0.37461 0.55833])
 % xlabel('Simulated (m)')
 % ylabel('LRA (m)')
 
+
+% figure
+% scatter(simStats.slopeRMSE, svdStats.slopeRMSE,'k','filled')
+% scatter1to1(gca,'origin');
+% xlabel('Simulated RMSE(cm/km)')
+% ylabel('LRA RMSE(cm/km)')
+% title(['Reach Slope Errors - ' river])
 %--------------------------------------------------------------------------
 
+
+%% gif
+% 
+% delete 'test.gif'
+% fileName = '/Users/Ted/Documents/GHL_meetings/Seminar/18.2.28/test.gif';
+% figure()
+% set(gcf,'Units','Normalized','Position',[0.319 0.495 0.352 0.25])
+% plot(nanmean(s,2)/1000,SVRecomp(U,S,V,1))
+% text('Units','normalized','position',[0.6 0.8],'String','rank: 1', 'FontSize',24)
+% xlim = [16 26]; ylim = [28 35];
+% set(gca,'XLim',xlim, 'YLim',ylim)
+% box off
+% xlabel('Flow Distance (km)')
+% ylabel('Elevation (m)')
+% gif(fileName,'DelayTime',0.5,'frame',gcf)
+% 
+% n(1) = norm(SVRecomp(U,S,V,1)-z);
+% 
+% for i = 2:numel(diag(S))
+% plot(nanmean(s,2)/1000,SVRecomp(U,S,V,1:i))
+% box off
+% text('Units','normalized','position',[0.6 0.8],'String',['rank: ' num2str(i)], 'FontSize',24)
+% set(gca,'XLim',xlim, 'YLim',ylim)
+% xlabel('Flow Distance (km)')
+% ylabel('Elevation (m)')
+% gif
+% 
+% n(i) = norm(SVRecomp(U,S,V,1:i)-z);
+% end
 

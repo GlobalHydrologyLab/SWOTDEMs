@@ -62,4 +62,4 @@ for i = 1 : length(fileName)
     
 end
 
-clearvars -except simulated truth
+% clearvars -except simulated truth

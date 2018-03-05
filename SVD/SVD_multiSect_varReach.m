@@ -13,24 +13,19 @@
 %
 % - make sure # of singular values chosen is providing best results.
 %
-% - merge resid and noResid versions using switch.
-%
 %--------------------------------------------------------------------------
 
-% clear
+clear
 close all
 
 targetRLkm = 10;
 sectMin = 30;
 rmResidOpt = 0;
-k = 2; 
+k = 1; 
 
-% river = 'Sacramento';
-river = 'Po';
+river = 'Sacramento';
+% river = 'Po';
 % river = 'Tanana';
-
-% river = 'PoV1';
-% river = 'PoV2'
 
 switch river
     case 'Sacramento'
@@ -54,20 +49,6 @@ switch river
         zField = 'nHeight';
         simulated = trimFields(simulated,99:829);
         truth = trimFields(truth,99:829);
-
-    case 'PoV1'
-        load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Po/transformedPoData.mat')
-        zField = 'nHeight';
-        % % % hard-coded removal of far range data
-        simulated = trimFields(simulated,1:400);
-        truth = trimFields(truth,1:400);
-
-    case 'PoV2'
-        load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Po/transformedPoDataV2.mat')
-        zField = 'nHeight';
-        % % % hard-coded removal of far range data
-        simulated(18:35) = trimFields(simulated(18:35),1:400);
-        truth(18:35) = trimFields(truth(18:35),1:400);
 end
 
 
@@ -78,20 +59,16 @@ end
 %all sections have >= sectMin rows
 nProf = length(simulated);
 simAllign = nodeAllign(simulated);
+zAll = simAllign.(zField);
 
+%trim truth to sim extent
 nodeRng = [min(simAllign.node(1,:)), max(simAllign.node(end,:))];
 truth = trimFields(truth,nodeRng);
 
 truthAllign = nodeAllign(truth);
-simAllign.(zField)(simAllign.(zField)==-9999) = NaN; %missing data value
-truthAllign.(zField)(truthAllign.(zField)==-9999) = NaN; %missing data value
 
-simAllign.sCoord = simAllign.sCoord;
-truthAllign.sCoord = truthAllign.sCoord;
-
-[section, zArray] = subsectByObs(simAllign.(zField),sectMin);
-observedBy = ~isnan(zArray);
-
+%subSectByObs choses the rectangular matrices for svd
+[section, zAll] = subsectByObs(simAllign.(zField),sectMin);
 
 %init. matrices for storing section data
 dim = size(simAllign.sCoord);
@@ -105,7 +82,7 @@ for r = min(section):max(section)
     truthReach = trimFields(truthAllign,inSect);
     
     %assemble full rectangular matrices of s,z data 
-    z = zArray(inSect,:);
+    z = zAll(inSect,:);
 %     z = truthAllign.(zField)(inSect,:);
     [z, delCol] = nanRows(z,2);
     s = simAllign.sCoord(inSect,~delCol);
@@ -148,7 +125,7 @@ for r = min(section):max(section)
     
     %recombine
     if rmResidOpt
-        z2 = U*S2*V' + zhat + ztrans;
+        z2 = z2 + zhat + ztrans;
     end
   
     % join section data for later comparison  
@@ -157,7 +134,6 @@ for r = min(section):max(section)
 end
 
 skm = nanmean(sAll,2)/1000;
-zAll = simAllign.(zField);
 
 zErr = zAll - truthAllign.(zField);
 z2Err = z2All - truthAllign.(zField);
@@ -214,15 +190,13 @@ simStats.reachZErr = reachAvgTruth - simStats.reachAvgZ;
 svdStats.reachZErr = reachAvgTruth - svdStats.reachAvgZ;
 
 %% 
-
-%--------------------------------------------------------------------------
 %--------------------------------------------------------------------------
 % plots
 %--------------------------------------------------------------------------
 
 %rothko section plot
 % figure()
-% imagesc(observedBy .* section)
+% imagesc(~isnan(zAll) .* section)
 % xlabel('Profile')
 % ylabel('Node')
 % c = lines;
@@ -244,13 +218,13 @@ xlabel('Singular Value Number')
 ylabel('Singular Value Magnitude')
 % title('Singular Values of Elevation Residuals')
 title(['Singular Values - ' sprintf(river)]);
-set(gca,'YScale','log');
+% set(gca,'YScale','log');
 set(gcf,'Position',[1000 987 862 351]);
 
 %original and approx profiles
 handle = figure();
 subplot(2,1,1);
-plot(skm,zArray)
+plot(skm,zAll)
 % plot(skm,truthAllign.(zField))
 hold on
 plot(skm,truthAllign.(zField)(:,3),'k','Linewidth',2)
@@ -388,4 +362,3 @@ legend('original','LRA')
 % 
 % n(i) = norm(SVRecomp(U,S,V,1:i)-z);
 % end
-

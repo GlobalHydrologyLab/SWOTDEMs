@@ -21,7 +21,7 @@ close all
 targetRLkm = 10;
 sectMin = 30;
 rmResidOpt = 0;
-k = 1; 
+k = 2; 
 
 river = 'Sacramento';
 % river = 'Po';
@@ -265,7 +265,7 @@ set(gcf,'Units','normalized','Position',[0.013672 0.013194 0.59922 0.91528])
 
 % reach slope errors
 figure()
-plotDim = 2; %1 is summary for each day. 2 is each reach.
+plotDim = 1; %1 is summary for each day. 2 is each reach.
 simStats.slopeMAE = nanmean(abs(simStats.slopeErr),plotDim);
 svdStats.slopeMAE = nanmean(abs(svdStats.slopeErr),plotDim);
 

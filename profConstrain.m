@@ -5,23 +5,29 @@ clear
 close all
 
 
-load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Sacramento/SacDataV3.mat')
+load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Sacramento/SacDataV4.mat')
 zField = 'geoHeight';
+
+% load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Po/transformedPo_3Pass.mat')
+% load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Tanana/transformedTananaData.mat')
+% zField = 'nHeight';
 % simulated = trimFields(simulated,15:30); %test small area
 
 simAllign = nodeAllign(simulated);
 truthAllign = nodeAllign(truth);
+meanZ = nanmean(simAllign.(zField),2); %simple average
+truthZ = nanmean(truthAllign.(zField),2);
 
 nX = size(simAllign.(zField),1);
 nDays= size(simAllign.(zField),2);
 % nObs = size(simAllign.(zField),2);
 nObs = sum(sum(~isnan(simAllign.(zField))));
 
-%% do eet
+%% set up
 
 %temporary placeholder for std
 %in this case, more obs is better so no inverse. less is better with std,
-%so make sure to add 1/std when replacing.
+%so make sure to do 1/std when replacing.
 simAllign.nObsScaled = (simAllign.nObs - min(min(simAllign.nObs))) / max(max(simAllign.nObs));
 
 
@@ -47,16 +53,13 @@ for i = 1:nX
     lastRow = endRow + 1;
 end
 
-%%
-
+%% do eet
 tic
 z = lsqlin(C,d,A,b);
 toc
 
-meanZ = nanmean(simAllign.(zField),2); %simple average
-truthZ = nanmean(truthAllign.(zField),2);
-
 %% plots
+
 
 figure
 plot(meanZ);

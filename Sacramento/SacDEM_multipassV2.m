@@ -9,7 +9,7 @@
 % 
 % %load data
 % load('Sacramento/drawnCenterline.mat') %hand drawn centerline
-% load('Sacramento/SWOTSimData/SimTruthV2.mat') %swot sim data
+% load('Sacramento/SacDataV4.mat') %swot sim data
 % load('Sacramento/DEMProfiles/SRTM_drawnCenterline.mat') %SRTM
 % load('Sacramento/DEMProfiles/ASTER_drawnCenterline.mat') %ASTER
 % load('Sacramento/DEMProfiles/NED_drawnCenterline.mat') %NED
@@ -47,7 +47,7 @@
 % snCoord = xy2sn(centerlineOut(:,1:2), ... 
 %         [simulated(1).easting, simulated(1).northing],transParam);
 % xy2snAscendCheck(snCoord(:,1)); 
-
+% 
 % %----------------------------------------------------------------------
 % %because 0 turns to NaN in the xy2sn function. will not be right if
 % %centerline changes.
@@ -73,10 +73,10 @@
 %     boatProfile(i).nCoord = snCoord(:,2);
 %     
 % end
-% 
-% 
-% % % % % % % clearvars -except boatProfile drifter simulated SRTM ASTER NED transParam truth
-% % % % % % % save('Sacramento/transformedSacDataV2.mat')
+
+
+% % % % % % clearvars -except boatProfile drifter simulated SRTM ASTER NED transParam truth
+% % % % % % save('Sacramento/transformedSacDataV2.mat')
 
 %% Load transformed data from last section
 %coordinate transformation is very slow 
@@ -85,6 +85,7 @@ clear
 close all
 
 load('Sacramento/transformedSacDataV2.mat')
+% load('Sacramento/SacDataV4.mat')
 zField = 'geoHeight';
 
 %% cleaning up pass 527
@@ -158,7 +159,7 @@ truthSmooth = smooth(truthAvg.sCoord, truthAvg.geoHeight, 5, 'moving');
 %low/high slope areas also have different widths, so placing knots at the
 %peaks in widths will approximate the low/high slope sequence interval.
 
-prescription = slmset('Decreasing','on','Verbosity',1,'Weights',simAvg.normWeight);
+prescription = slmset('Decreasing','on','Verbosity',0,'Weights',simAvg.normWeight);
 
 [~,iKnots] = slidePeaks(simAvg.nWidth,0.10,0);
 
@@ -174,6 +175,7 @@ knotZ = slmeval(slm.knots,slm);
 %% RMSEs
 RMSEslm = sqrt(mean((slmProf - truthAvg.geoHeight).^2));
 MAEslm = mean(abs(slmProf - truthAvg.geoHeight));
+MAEsim = mean(abs(simAvg.geoHeight - truthAvg.geoHeight));
 
 RMSEsimAvg = sqrt(mean((simAvg.geoHeight - truthAvg.geoHeight).^2));
 RMSEsmooth = sqrt(nanmean((simSmooth - truthSmooth).^2));
@@ -184,16 +186,43 @@ for i=1:length(simulated)
 end
 
  
-%% Slopes
+%% Define reaches
 
-% slopeSLMTruth = diff(slmProfTruth)./diff(slmTruth.x)*-1;
-slopeTruth = diff(truthAvg.sCoord)./diff(truthAvg.geoHeight)*-1;
-slopeSLM = diff(slmProf)./diff(slm.x)*-1;
-slopeDiff = slopeSLM-slopeTruth;
+% nodeRng = [min(simAllign.node(1,:)), max(simAllign.node(end,:))];
+targetRL = 10;
+reachVec = equiReach(truthAvg.sCoord./1000,targetRL);
+
+[simulated.reach] = deal(reachVec);
+[truth.reach] = deal(reachVec);
+
+%% Reach stats
+reaches = unique(reachVec)';
+
+for r = reaches
+    inReach = reachVec == r;
+    RL(r) = range(simAvg.sCoord(inReach));
+    if sum(inReach)>=2
+        fitSim = polyfit(simAvg.sCoord(inReach), simAvg.(zField)(inReach),1);
+        fitSLM = polyfit(slm.x(inReach),slmProf(inReach),1);
+        
+        fitTruth = polyfit(truthAvg.sCoord(inReach), truthAvg.(zField)(inReach),1);
+
+        SimSlopeErr(r) = (fitTruth(1) - fitSim(1)) .*100000;
+        SLMSlopeErr(r) = (fitTruth(1) - fitSLM(1)) .*100000;
+        SimRelSlopeErr(r) = SimSlopeErr(r) / fitTruth(1) .*100;
+        SLMRelSlopeErr(r) = SLMSlopeErr(r) / fitTruth(1) .*100;
+    end
+end
+
+simRRMSE = sqrt(mean(SimRelSlopeErr.^2));
+SLMRRMSE = sqrt(mean(SLMRelSlopeErr.^2));
+
 
 %% plot things
 close all
-% 
+
+
+while false
 % figure(1)
 % hold on
 % title('pass 249')
@@ -227,14 +256,13 @@ close all
 % figure(2)
 % h = findobj(gca,'Type','line');
 % legend(h(1:2),'model','simulated');
+end
 
 
-
-%profile view
-figure()
-hold on
-
+% All DEMs
+% figure()
 % plot(ASTER(:,4)/1000,ASTER(:,3),'Linewidth',2)
+% hold on
 % plot(SRTM(:,4)/1000,SRTM(:,3),'Linewidth',2)
 % plot(NED(:,4)/1000,NED(:,3),'Linewidth',2) 
 % plot(drifter(:,4)/1000,drifter(:,3)+29,'Linewidth',2)
@@ -245,18 +273,30 @@ hold on
 % pbaspect([4 3 1])
 
 
-% 
+% figure()
+hold on
 % plot(simAvg.sCoord/1000,simAvg.geoHeight,'LineWidth',2) %averaged output profile
 % plot(truthAvg.sCoord/1000,truthAvg.geoHeight,'LineWidth',2) %averaged input profile
 % plot(truth(1).sCoord/1000,[truth.geoHeight])
 plot(truthAvg.sCoord/1000,truthAvg.geoHeight,'k','LineWidth',2) %averaged input profile
-plot(slm.x/1000,slmProf,'r-','LineWidth',2) %slm profile
-plot(simAvg.sCoord/1000,simAvg.geoHeight,'-')
+% plot(simAvg.sCoord/1000,simAvg.geoHeight,'b-','LineWidth',1)
+plot(slm.x/1000,slmProf,'r-','LineWidth',1.5) %slm profile
 
-legend('Simulator input node median','Constrained weighted spline')
-title('Median SWOT simulator profiles')
+minS = truthAvg.sCoord(1);
+sr(1) = minS;
+zr(1) = truthAvg.(zField)(1);
+for r = reaches
+    ir = find(reachVec == r,1,'last');
+    sr(r+1) = truthAvg.sCoord(ir);
+    zr(r+1) = truthAvg.(zField)(ir); 
+end
+plot(sr./1000, zr, 'b.', 'MarkerSize', 20)
+
+legend('Simulator input','Processed Output','~10km reaches')
+title('Sacramento River Profile')
 xlabel('Flow distance (km)')
 ylabel('Elevation (m)')
+box on
 
 % for i = 1:length(boatProfile)
 %     plot(boatProfile(i).sCoord/1000,boatProfile(i).height+29)
@@ -265,5 +305,5 @@ ylabel('Elevation (m)')
 % set(gcf,'Units','normalized','Position', [0.3, 0.2, 0.5, 0.6])
 
 hold off
-
-toc
+% 
+% toc

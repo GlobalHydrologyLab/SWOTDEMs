@@ -2,8 +2,10 @@
 %Samples input geotiffs at the node locations to get truth profiles.
 %Probably should redo this riverObs.
 clear
+close all
 
-load('/Users/Ted/Documents/MATLAB/SWOT_DEMs/Tanana/avgTananaCenterline.mat')
+
+load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Tanana/avgTananaCenterline.mat')
 cx = centerline(:,1);
 cy = centerline(:,2);
 
@@ -12,15 +14,15 @@ k = dir('/Users/Ted/Documents/Tanana/SWOTSimulator/TananaRiverObs/*.tif');
 for i = 1:length(k)
     p = [k(i).folder '/' k(i).name];
     
-    prof = geotiffinterp(p, cx, cy,'nearest','buffer',7,'show');
+    prof = geotiffinterp(p, cx, cy,'nearest','buffer',3,'show');
     
     %----------------------------------------------------------------------
     prof = prof + 11.6; %ellipsoid correction per Elizabeth
     %----------------------------------------------------------------------
     
     
-    %masked areas (where centerline is outside river) have random large
-    %negative numbers, set to NaN here.
+%     %masked areas (where centerline is outside river) have random large
+%     %negative numbers, set to NaN here.
     
     t(i).name = k(i).name(1:end-4);
     t(i).node = clNodes;

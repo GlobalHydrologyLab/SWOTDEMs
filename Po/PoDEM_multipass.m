@@ -152,8 +152,8 @@ for r = reaches
         
         fitTruth = polyfit(truthAvg.sCoord(inReach), truthAvg.(zField)(inReach),1);
 
-        SimSlopeErr(r) = fitTruth(1) - fitSim(1) .*100000;
-        SLMSlopeErr(r) = fitTruth(1) - fitSLM(1) .*100000;
+        SimSlopeErr(r) = (fitTruth(1) - fitSim(1)) .*100000;
+        SLMSlopeErr(r) = (fitTruth(1) - fitSLM(1)) .*100000;
         SimRelSlopeErr(r) = SimSlopeErr(r) / fitTruth(1) .*100;
         SLMRelSlopeErr(r) = SLMSlopeErr(r) / fitTruth(1) .*100;
     end
@@ -161,7 +161,7 @@ end
 
 simRRMSE = sqrt(mean(SimRelSlopeErr.^2));
 SLMRRMSE = sqrt(mean(SLMRelSlopeErr.^2));
-
+slmMAE = nanmean(abs(SLMSlopeErr));
 
 %% plot things
 close all

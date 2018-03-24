@@ -105,8 +105,8 @@ RMSEsmooth = sqrt(nanmean((simSmooth - truthAvg.nHeight).^2));
 %% Define reaches
 
 nodeRng = [min(simAllign.node(1,:)), max(simAllign.node(end,:))];
-nodePerReach = 25;
-reachVec = equiReach(range(nodeRng)+1,nodePerReach);
+targetRLkm = 10;
+reachVec = equiReach(slm.x./1000,targetRLkm);
 
 [simulated.reach] = deal(reachVec);
 [truth.reach] = deal(reachVec);
@@ -117,14 +117,14 @@ reaches = unique(reachVec)';
 for r = reaches
     inReach = reachVec == r;
     RL(r) = range(simAvg.sCoord(inReach));
-    if sum(inReach)>=2
+    if sum(inReach)>= 0.9*sum(reachVec==r)
         fitSim = polyfit(simAvg.sCoord(inReach), simAvg.(zField)(inReach),1);
         fitSLM = polyfit(slm.x(inReach),slmProf(inReach),1);
         
         fitTruth = polyfit(truthAvg.sCoord(inReach), truthAvg.(zField)(inReach),1);
 
-        SimSlopeErr(r) = fitTruth(1) - fitSim(1);
-        SLMSlopeErr(r) = fitTruth(1) - fitSLM(1);
+        SimSlopeErr(r) = (fitTruth(1) - fitSim(1)) .*100000;
+        SLMSlopeErr(r) = (fitTruth(1) - fitSLM(1)) .*100000;
         SimRelSlopeErr(r) = SimSlopeErr(r) / fitTruth(1) .*100;
         SLMRelSlopeErr(r) = SLMSlopeErr(r) / fitTruth(1) .*100;
     end
@@ -132,6 +132,7 @@ end
 
 simRRMSE = sqrt(nanmean(SimRelSlopeErr.^2));
 SLMRRMSE = sqrt(nanmean(SLMRelSlopeErr.^2));
+slmMAE = nanmean(abs(SLMSlopeErr));
 
 %% plot things
 close all

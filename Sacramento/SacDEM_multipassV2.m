@@ -85,7 +85,7 @@ clear
 close all
 
 load('Sacramento/transformedSacDataV2.mat')
-% load('Sacramento/SacDataV4.mat')
+load('Sacramento/SacDataV4.mat')
 zField = 'geoHeight';
 
 %% cleaning up pass 527
@@ -216,7 +216,7 @@ end
 
 simRRMSE = sqrt(mean(SimRelSlopeErr.^2));
 SLMRRMSE = sqrt(mean(SLMRelSlopeErr.^2));
-
+slmMAE = nanmean(abs(SLMSlopeErr));
 
 %% plot things
 close all
@@ -259,51 +259,92 @@ while false
 end
 
 
+drifter = nanRows(drifter);
+NED = nanRows(NED);
+SRTM = nanRows(SRTM);
+
+drifter(diff(drifter(:,4))==0,:) = [];
+NED(diff(NED(:,4))==0,:) = [];
+SRTM(diff(SRTM(:,4))==0,:) = [];
+
+sMin = min(drifter(:,4));
+sMax = max(drifter(:,4));
+% NED(NED(:,4) < sMin | NED(:,4)>sMax | isnan(NED(:,4)),:) = [];
+
+NED = inRange(NED,4,[sMin sMax]);
+SRTM = inRange(SRTM,4,[sMin sMax]);
+[slm.x, ix] = inRange(slm.x,1,[sMin sMax]);
+slmProf = slmProf(ix);
+slmProf = slmProf - nanmean(slmProf);
+
+SRTM(:,3) = SRTM(:,3) - nanmean(SRTM(:,3));
+drifter(:,3) = drifter(:,3) - nanmean(drifter(:,3));
+NED(:,3) = NED(:,3) - nanmean(NED(:,3));
+
+[~,NEDi] = unique(NED(:,4),'first');
+NED = NED(NEDi,:);
+
+xl = [0 55];
+
 % All DEMs
-% figure()
-% plot(ASTER(:,4)/1000,ASTER(:,3),'Linewidth',2)
-% hold on
-% plot(SRTM(:,4)/1000,SRTM(:,3),'Linewidth',2)
-% plot(NED(:,4)/1000,NED(:,3),'Linewidth',2) 
-% plot(drifter(:,4)/1000,drifter(:,3)+29,'Linewidth',2)
-% xlabel('flow distance (km)')
-% ylabel('elevation (m)')
-% box on
-% legend('ASTER','SRTM','NED','Drifter')
+figure()
+subplot(2,1,1)
+hold on
+plot(SRTM(:,4)/1000,SRTM(:,3),'Linewidth',2)
+plot(NED(:,4)/1000,NED(:,3),'Linewidth',2) 
+plot(slm.x./1000,slmProf,'Linewidth',2)
+plot(drifter(:,4)/1000,drifter(:,3),'k','Linewidth',2)
+xlabel('Flow distance (km)')
+ylabel('Height (m)')
+box on
+legend('SRTM','NED','simulated SWOT','GPS on boat')
+set(gca,'XLim',xl)
+title('Long profiles of the Sacramento')
+
+subplot(2,1,2)
+plot(xl,[0 0],'k','Linewidth',1)
+hold on
+plot(drifter(:,4)/1000,interp1(SRTM(:,4),SRTM(:,3),drifter(:,4)) - drifter(:,3),'Linewidth',2)
+plot(drifter(:,4)/1000,interp1(NED(:,4),NED(:,3),drifter(:,4)) - drifter(:,3),'Linewidth',2) 
+plot(drifter(:,4)./1000,interp1(slm.x,slmProf,drifter(:,4)) - drifter(:,3),'Linewidth',2)
+xlabel('Flow distance (km)')
+ylabel('Difference from GPS (m)')
+box on
+set(gca,'XLim',xl)
 % pbaspect([4 3 1])
 
-
+% 
 % figure()
-hold on
-% plot(simAvg.sCoord/1000,simAvg.geoHeight,'LineWidth',2) %averaged output profile
-% plot(truthAvg.sCoord/1000,truthAvg.geoHeight,'LineWidth',2) %averaged input profile
-% plot(truth(1).sCoord/1000,[truth.geoHeight])
-plot(truthAvg.sCoord/1000,truthAvg.geoHeight,'k','LineWidth',2) %averaged input profile
-% plot(simAvg.sCoord/1000,simAvg.geoHeight,'b-','LineWidth',1)
-plot(slm.x/1000,slmProf,'r-','LineWidth',1.5) %slm profile
-
-minS = truthAvg.sCoord(1);
-sr(1) = minS;
-zr(1) = truthAvg.(zField)(1);
-for r = reaches
-    ir = find(reachVec == r,1,'last');
-    sr(r+1) = truthAvg.sCoord(ir);
-    zr(r+1) = truthAvg.(zField)(ir); 
-end
-plot(sr./1000, zr, 'b.', 'MarkerSize', 20)
-
-legend('Simulator input','Processed Output','~10km reaches')
-title('Sacramento River Profile')
-xlabel('Flow distance (km)')
-ylabel('Elevation (m)')
-box on
-
-% for i = 1:length(boatProfile)
-%     plot(boatProfile(i).sCoord/1000,boatProfile(i).height+29)
+% hold on
+% % plot(simAvg.sCoord/1000,simAvg.geoHeight,'LineWidth',2) %averaged output profile
+% % plot(truthAvg.sCoord/1000,truthAvg.geoHeight,'LineWidth',2) %averaged input profile
+% % plot(truth(1).sCoord/1000,[truth.geoHeight])
+% plot(truthAvg.sCoord/1000,truthAvg.geoHeight,'k','LineWidth',2) %averaged input profile
+% % plot(simAvg.sCoord/1000,simAvg.geoHeight,'b-','LineWidth',1)
+% plot(slm.x/1000,slmProf,'r-','LineWidth',1.5) %slm profile
+% 
+% minS = truthAvg.sCoord(1);
+% sr(1) = minS;
+% zr(1) = truthAvg.(zField)(1);
+% for r = reaches
+%     ir = find(reachVec == r,1,'last');
+%     sr(r+1) = truthAvg.sCoord(ir);
+%     zr(r+1) = truthAvg.(zField)(ir); 
 % end
-
-% set(gcf,'Units','normalized','Position', [0.3, 0.2, 0.5, 0.6])
-
-hold off
+% plot(sr./1000, zr, 'b.', 'MarkerSize', 20)
+% 
+% legend('Simulator input','Processed Output','~10km reaches')
+% title('Sacramento River Profile')
+% xlabel('Flow distance (km)')
+% ylabel('Elevation (m)')
+% box on
+% 
+% % for i = 1:length(boatProfile)
+% %     plot(boatProfile(i).sCoord/1000,boatProfile(i).height+29)
+% % end
+% 
+% % set(gcf,'Units','normalized','Position', [0.3, 0.2, 0.5, 0.6])
+% 
+% hold off
 % 
 % toc

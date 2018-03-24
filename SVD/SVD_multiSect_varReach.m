@@ -22,6 +22,7 @@ targetRLkm = 10;
 sectMin = 30;
 rmResidOpt = 0;
 k = 1; 
+maxDiff = 0;
 
 river = 'Sacramento';
 % river = 'Po';
@@ -126,7 +127,7 @@ end
 
 %constrain profiles
 for i = 1:size(z2All,2)
-    z2All(:,i) = slopeConstrain(z2All(:,i),.01);
+    z2All(:,i) = slopeConstrain(z2All(:,i),maxDiff);
 end
 
 

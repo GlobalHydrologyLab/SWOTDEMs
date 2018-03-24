@@ -1,44 +1,69 @@
-function [x] = slopeConstrain(d,maxSlope)
-% x = slopeConstrain(d,maxSlope)
+function [x] = slopeConstrain(dIn,maxDiff)
+% x = slopeConstrain(d,maxDiff)
 %
-%Takes in data vector d, sets up and solves lsqlin() such that:
+%Takes in data d, sets up and solves lsqlin() such that:
 %
-%d(i) - d(i+1) <= maxSlope
+%x(i) - x(i+1) <= maxDiff
 %
-%maxSlope has a default value of 0.
+%d can be a matrix or a column vector. rows are considered to be the same x
+%value in the regression. Calling slopeConstrain on a matrix will use all
+%non-NaN values in the row to estimate the row value. maxDiff has a
+%default value of 0.
 %
 %Read documentation for lsqlin for more info.
 
-if nargin < 2 
-    maxSlope = 0;
+if nargin < 2
+    maxDiff = 0;
 end
 
-d=d(:); %force column vector.
-n = numel(d);
+observed = ~isnan(dIn);
+missingNodes = ~any(observed,2);
+nObs = sum(sum(observed));
 
-x = nan(n,1);
+nOrigNodes = size(dIn,1);
+dIn(missingNodes,:) = [];
+nNodes = size(dIn,1);
+observed = ~isnan(dIn);
 
-[d, delId] = nanRows(d);
-n = n-sum(delId);
+C = zeros(nObs,nNodes);
+d = zeros(nObs,1);
+A = zeros(nNodes);
+b = zeros(nNodes,1) + maxDiff;
 
-C = diag(ones(n,1));
-b = zeros(n,1) + maxSlope;
-A = zeros(n,n);
 
-for j = 1:n-1
-    A(j,j) = -1;
-    A(j,j+1) = 1;
+firstRow = 1;
+for i = 1:nNodes
+%     notNan = observed(i,:);
+    nd = sum(~isnan(dIn(i,:)));
+    
+    if nd ~=0
+        endRow = firstRow+nd-1;
+
+        C(firstRow:endRow,i) = ones(nd,1);
+        d(firstRow:endRow,1) = dIn(i,observed(i,:));
+        
+        firstRow = endRow + 1;
+
+        %first derivative matrix
+        if i < nNodes
+            A(i,i+1) = 1;
+            A(i,i) = -1;
+        end
+        
+    end
+
 end
 
 options = optimset('display','off');
-[xCol,~,~,exitFlag] = lsqlin(C,d,A,b,[],[],[],[],[],options);
+[xSolve,~,~,exitFlag] = lsqlin(C,d,A,b,[],[],[],[],[],options);
 
 if exitFlag ~= 1
     warning(['lsqlin exit flag was ' num2str(exitFlag) ...
         '. Check lsqlin documentation for cause of this flag.'])
 end
 
-x(~delId) = xCol;
+x = nan(nOrigNodes,1);
+x(~missingNodes) = xSolve;
 
 end
 

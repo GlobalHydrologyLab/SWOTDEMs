@@ -1,4 +1,4 @@
-% SVD_multiSect_varReach.m Extending idea of SVD application to reduce
+%% SVD_multiSect_varReach.m Extending idea of SVD application to reduce
 % errors in each profile individually to work for full river profiles
 % instead of subsections. Reaches are defined by equiReach.m, which defines
 % reaches only based on making them similar in length. 
@@ -21,7 +21,7 @@ close all
 targetRLkm = 10;
 sectMin = 30;
 rmResidOpt = 0;
-k = 2; 
+k = 1; 
 
 river = 'Sacramento';
 % river = 'Po';
@@ -94,19 +94,9 @@ for r = min(section):max(section)
     end
     
     if rmResidOpt
-        % fit polynomial to all data in reach
-        nProfSect = size(z,2);
-        polyOrder = 1;
-        sv = reshape(s,[],1);
-        zv = reshape(z,[],1);
-        [m,~,mu] = polyfit(sv,zv,polyOrder);
-
-        %SVD on residuals
-        zhat = polyval(m,s,[],mu);
-        zresid = reshape(z-zhat, [], nProfSect);
-        ztrans = min(zresid(:));
-        zresid = zresid - ztrans;
-
+        %remove mean from each node.
+        mz = nanmean(z,2);
+        zresid = z - mz;
         [U,S,V] = svd(zresid);
     else
         [U,S,V] = svd(z);
@@ -121,17 +111,24 @@ for r = min(section):max(section)
     %----------------------------------------------------------------------
 
     %now modify S, removing smaller components.
-    z2 = SVRecomp(U,S,V,1:iSV(r));
+%     z2 = SVRecomp(U,S,V,1:iSV(r));
+    z2 = SVRecomp(U,S,V,[1,3]);
     
     %recombine
     if rmResidOpt
-        z2 = z2 + zhat + ztrans;
+        z2 = z2 + mz;
     end
   
     % join section data for later comparison  
     z2All(inSect,~delCol) = z2;
     sAll(inSect,~delCol) = s;
 end
+
+%constrain profiles
+for i = 1:size(z2All,2)
+    z2All(:,i) = slopeConstrain(z2All(:,i),.01);
+end
+
 
 skm = nanmean(sAll,2)/1000;
 
@@ -148,7 +145,6 @@ reachVec = equiReach(skm,targetRLkm);
 reaches = unique(reachVec)';
 
 %init stats matrices with NaNs.
-
 simStats.slope = nan(length(reaches),nProf);
 simStats.slopeErr = nan(length(reaches),nProf);
 simStats.relSlopeErr = nan(length(reaches),nProf);
@@ -227,7 +223,7 @@ subplot(2,1,1);
 plot(skm,zAll)
 % plot(skm,truthAllign.(zField))
 hold on
-plot(skm,truthAllign.(zField)(:,3),'k','Linewidth',2)
+% plot(skm,truthAllign.(zField)(:,3),'k','Linewidth',2)
 xlabel('Flow Distance (km)')
 ylabel('Elevation (m)')
 title('Original Simulation')
@@ -235,7 +231,7 @@ title('Original Simulation')
 subplot(2,1,2);
 plot(skm,z2All)
 hold on
-plot(skm,truthAllign.(zField)(:,3),'k','Linewidth',2)
+% plot(skm,truthAllign.(zField)(:,3),'k','Linewidth',2)
 xlabel('Flow Distance (km)')
 ylabel('Elevation (m)')
 title('Low-Rank Approximation')
@@ -299,6 +295,14 @@ ksdensity(simStats.slopeErr(:))
 hold on
 ksdensity(svdStats.slopeErr(:))
 legend('original','LRA')
+
+svdStats.slopePctChange = (nanmean(svdStats.slopeMAE)-nanmean(simStats.slopeMAE))./nanmean(simStats.slopeMAE);
+subplot(2,2,4)
+text('Units','normalized','position',[0.05 0.8],'String',['Sim: ' num2str(nanmean(simStats.slopeMAE)) ' cm/km'], 'FontSize',24)
+text('Units','normalized','position',[0.05 0.6],'String',['LRA: ' num2str(nanmean(svdStats.slopeMAE)) ' cm/km'], 'FontSize',24)
+text('Units','normalized','position',[0.05 0.4],'String', ... 
+    ['% change: ' num2str(svdStats.slopePctChange)], 'FontSize',24)
+set(gca,'visible','off')
 
 % subplot(2,2,4)
 % scatter(simStats.slopeRRMSE, svdStats.slopeRRMSE,[],nCol,'filled')

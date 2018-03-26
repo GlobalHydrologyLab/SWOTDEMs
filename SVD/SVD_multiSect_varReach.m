@@ -20,8 +20,8 @@ close all
 
 targetRLkm = 10;
 sectMin = 30;
-rmResidOpt = 0;
-k = 1; 
+rmMeanOpt = 1;
+k = [1,3]; 
 maxDiff = 0;
 
 river = 'Sacramento';
@@ -94,7 +94,7 @@ for r = min(section):max(section)
         s(mMiss(i),nMiss(i)) = nanmean(s(mMiss(i),:));
     end
     
-    if rmResidOpt
+    if rmMeanOpt
         %remove mean from each node.
         mz = nanmean(z,2);
         zresid = z - mz;
@@ -108,15 +108,15 @@ for r = min(section):max(section)
     % this section should be improved.
     %----------------------------------------------------------------------
     SVal = diag(S);
-    iSV(r) = k;
+%     iSV(r) = k;
     %----------------------------------------------------------------------
 
     %now modify S, removing smaller components.
 %     z2 = SVRecomp(U,S,V,1:iSV(r));
-    z2 = SVRecomp(U,S,V,[1,3]);
+    z2 = SVRecomp(U,S,V,k);
     
     %recombine
-    if rmResidOpt
+    if rmMeanOpt
         z2 = z2 + mz;
     end
   
@@ -127,7 +127,14 @@ end
 
 %constrain profiles
 for i = 1:size(z2All,2)
-    z2All(:,i) = slopeConstrain(z2All(:,i),maxDiff);
+    
+    %unfortunate hack to deal with tanana data in reverse order. should fix
+    %this in the earlier data processing script.
+    if strcmp(river,'Tanana')
+        z2All(:,i) = flip(slopeConstrain(flip(z2All(:,i)),maxDiff));
+    else
+        z2All(:,i) = slopeConstrain(z2All(:,i),maxDiff);
+    end
 end
 
 

@@ -15,18 +15,19 @@
 %
 %--------------------------------------------------------------------------
 
-clear
+% clear
+clearvars -except SVDStats SIMStats smoothStats smoothSVDStats
 close all
 
-targetRLkm = 10;
-sectMin = 30;
-rmMeanOpt = 1;
-k = [1,3]; 
-maxDiff = 0;
+opts.targetRL = 10;
+opts.sectMin = 30;
+opts.rmMean = 1;
+opts.iSV = [1]; 
+opts.maxDiff = 0.005;
 
-river = 'Sacramento';
+% river = 'Sacramento';
 % river = 'Po';
-% river = 'Tanana';
+river = 'Tanana';
 
 switch river
     case 'Sacramento'
@@ -53,11 +54,11 @@ switch river
 end
 
 
-% clearvars -except simulated truth zField targetRLkm sectMin rmResidOpt river
+% clearvars -except simulated truth zField opts
 
 
 %Group data into matrices without gaps, intelligently deleting data so that
-%all sections have >= sectMin rows
+%all sections have >= opts.sectMin rows
 nProf = length(simulated);
 simAllign = nodeAllign(simulated);
 zAll = simAllign.(zField);
@@ -69,7 +70,7 @@ truth = trimFields(truth,nodeRng);
 truthAllign = nodeAllign(truth);
 
 %subSectByObs choses the rectangular matrices for svd
-[section, zAll] = subsectByObs(simAllign.(zField),sectMin);
+[section, zAll] = subsectByObs(simAllign.(zField),opts.sectMin);
 
 %init. matrices for storing section data
 dim = size(simAllign.sCoord);
@@ -84,7 +85,7 @@ for r = min(section):max(section)
     
     %assemble full rectangular matrices of s,z data 
     z = zAll(inSect,:);
-%     z = truthAllign.(zField)(inSect,:);
+%     z = truthAllign.(zField)(inSect,:); %testing svd on noise-free data
     [z, delCol] = nanRows(z,2);
     s = simAllign.sCoord(inSect,~delCol);
 
@@ -94,7 +95,7 @@ for r = min(section):max(section)
         s(mMiss(i),nMiss(i)) = nanmean(s(mMiss(i),:));
     end
     
-    if rmMeanOpt
+    if opts.rmMean
         %remove mean from each node.
         mz = nanmean(z,2);
         zresid = z - mz;
@@ -103,20 +104,13 @@ for r = min(section):max(section)
         [U,S,V] = svd(z);
     end
     
-    %----------------------------------------------------------------------
-    % Determine best rank 
-    % this section should be improved.
-    %----------------------------------------------------------------------
-    SVal = diag(S);
-%     iSV(r) = k;
-    %----------------------------------------------------------------------
 
     %now modify S, removing smaller components.
 %     z2 = SVRecomp(U,S,V,1:iSV(r));
-    z2 = SVRecomp(U,S,V,k);
+    z2 = SVRecomp(U,S,V,opts.iSV);
     
     %recombine
-    if rmMeanOpt
+    if opts.rmMean
         z2 = z2 + mz;
     end
   
@@ -131,9 +125,9 @@ for i = 1:size(z2All,2)
     %unfortunate hack to deal with tanana data in reverse order. should fix
     %this in the earlier data processing script.
     if strcmp(river,'Tanana')
-        z2All(:,i) = flip(slopeConstrain(flip(z2All(:,i)),maxDiff));
+        z2All(:,i) = flip(slopeConstrain(flip(z2All(:,i)),opts.maxDiff));
     else
-        z2All(:,i) = slopeConstrain(z2All(:,i),maxDiff);
+        z2All(:,i) = slopeConstrain(z2All(:,i),opts.maxDiff);
     end
 end
 
@@ -142,57 +136,22 @@ skm = nanmean(sAll,2)/1000;
 
 zErr = zAll - truthAllign.(zField);
 z2Err = z2All - truthAllign.(zField);
-%--------------------------------------------------------------------------
-% Reach Stats
-%--------------------------------------------------------------------------
-%create reaches
-reachVec = equiReach(skm,targetRLkm);
-[simulated.reach] = deal(reachVec);
-[truth.reach] = deal(reachVec);
 
-reaches = unique(reachVec)';
+simStats = reachStats(skm,zAll,truthAllign.(zField),opts.targetRL);
+svdStats = reachStats(skm,z2All,truthAllign.(zField),opts.targetRL);
 
-%init stats matrices with NaNs.
-simStats.slope = nan(length(reaches),nProf);
-simStats.slopeErr = nan(length(reaches),nProf);
-simStats.relSlopeErr = nan(length(reaches),nProf);
-simStats.reachAvgZ = nan(length(reaches),nProf);
-svdStats = simStats;
 
-reachAvgTruth = nan(length(reaches),nProf);
-truthSlope = nan(length(reaches),nProf);
-
-for r = reaches
-    RL(r) = range(skm(reachVec==r));
-    for p = 1:nProf
-        inReach = reachVec == r & ~isnan(z2All(:,p));
-        if sum(inReach)>= 0.9*sum(reachVec==r)
-            fitSim = polyfit(sAll(inReach,p),zAll(inReach,p),1);
-            fitSVD = polyfit(sAll(inReach,p),z2All(inReach,p),1);
-
-            inReach = truth(p).reach == r & ~isnan(truthAllign.sCoord(:,p));
-            fitTruth = polyfit(truthAllign.sCoord(inReach,p), ... 
-                truthAllign.(zField)(inReach,p),1);
-            
-            simStats.slope(r,p) = fitSim(1) .* 100000; %m/m to cm/km
-            svdStats.slope(r,p) = fitSVD(1) .* 100000;
-            truthSlope(r,p) = fitTruth(1) .* 100000;
-
-            simStats.slopeErr(r,p) = truthSlope(r,p) - simStats.slope(r,p);
-            svdStats.slopeErr(r,p) = truthSlope(r,p) - svdStats.slope(r,p);
-            simStats.relSlopeErr(r,p) = simStats.slopeErr(r,p) / truthSlope(r,p);
-            svdStats.relSlopeErr(r,p) = svdStats.slopeErr(r,p) / truthSlope(r,p);
-            
-            simStats.reachAvgZ(r,p) = nanmean(zAll(inReach,p));
-            svdStats.reachAvgZ(r,p) = nanmean(z2All(inReach,p));
-            reachAvgTruth(r,p) = nanmean(truthAllign.(zField)(inReach,p));
-        end
-    end
+%Renato's gaussian smoothing.
+for i = 1:size(zAll,2)
+    [smoothProfs(:,i),~] = GaussianAveraging(skm,zAll(:,i),simAllign.nWidth(:,i),10,2);
+    [smoothSVDProfs(:,i),~] = GaussianAveraging(skm,z2All(:,i),simAllign.nWidth(:,i),10,2);
 end
 
-simStats.reachZErr = reachAvgTruth - simStats.reachAvgZ;
-svdStats.reachZErr = reachAvgTruth - svdStats.reachAvgZ;
 
+smoothStats.(river) = reachStats(skm,smoothProfs,truthAllign.(zField),opts.targetRL);
+smoothSVDStats.(river) = reachStats(skm,smoothSVDProfs,truthAllign.(zField),opts.targetRL);
+SVDStats.(river) = svdStats;
+SIMStats.(river) = simStats;
 %% 
 %--------------------------------------------------------------------------
 % plots
@@ -217,7 +176,7 @@ set(gca,'color',0*[1 1 1]);
 
 %singular values
 figure()
-bar(SVal)
+bar(diag(S))
 xlabel('Singular Value Number')
 ylabel('Singular Value Magnitude')
 % title('Singular Values of Elevation Residuals')
@@ -267,32 +226,16 @@ set(gcf,'Units','normalized','Position',[0.013672 0.013194 0.59922 0.91528])
 % title('EPDF of Node Errors')
 % legend('Original Data','Low Rank')
 
-% reach slope errors
 figure()
-plotDim = 1; %1 is summary for each day. 2 is each reach.
-simStats.slopeMAE = nanmean(abs(simStats.slopeErr),plotDim);
-svdStats.slopeMAE = nanmean(abs(svdStats.slopeErr),plotDim);
-
-simStats.slopeRMSE = sqrt(nanmean(simStats.slopeErr.^2,plotDim));
-svdStats.slopeRMSE = sqrt(nanmean(svdStats.slopeErr.^2,plotDim));
-
-simStats.slopeRRMSE = sqrt(nanmean(simStats.relSlopeErr.^2,plotDim)).*100;
-svdStats.slopeRRMSE = sqrt(nanmean(svdStats.relSlopeErr.^2,plotDim)).*100;
-
-simStats.slopeRMAE = nanmean(abs(simStats.relSlopeErr),plotDim).*100;
-svdStats.slopeRMAE = nanmean(abs(svdStats.relSlopeErr),plotDim).*100;
-
-% figure()
-nCol = 1:numel(simStats.slopeMAE);
 subplot(2,2,1)
-scatter(simStats.slopeMAE, svdStats.slopeMAE,[],nCol,'filled')
+scatter(simStats.slopeMAE, svdStats.slopeMAE,'filled')
 scatter1to1(gca,'origin');
 xlabel('Simulated MAE(cm/km)')
 ylabel('LRA MAE(cm/km)')
 title('MAE')
 % 
 subplot(2,2,2)
-scatter(simStats.slopeRMSE, svdStats.slopeRMSE,[],nCol,'filled')
+scatter(simStats.slopeRMSE, svdStats.slopeRMSE,'filled')
 scatter1to1(gca,'origin');
 xlabel('Simulated RMSE(cm/km)')
 ylabel('LRA RMSE(cm/km)')
@@ -304,7 +247,7 @@ hold on
 ksdensity(svdStats.slopeErr(:))
 legend('original','LRA')
 
-svdStats.slopePctChange = (nanmean(svdStats.slopeMAE)-nanmean(simStats.slopeMAE))./nanmean(simStats.slopeMAE);
+svdStats.slopePctChange = (nanmean(svdStats.slopeMAE)-nanmean(simStats.slopeMAE))./nanmean(simStats.slopeMAE) * 100;
 subplot(2,2,4)
 text('Units','normalized','position',[0.05 0.8],'String',['Sim: ' num2str(nanmean(simStats.slopeMAE)) ' cm/km'], 'FontSize',24)
 text('Units','normalized','position',[0.05 0.6],'String',['LRA: ' num2str(nanmean(svdStats.slopeMAE)) ' cm/km'], 'FontSize',24)

@@ -1,4 +1,4 @@
-function [x] = slopeConstrain(dIn,maxDiff)
+function [x] = slopeConstrain(dIn,maxDiff,secondDeriv)
 % x = slopeConstrain(d,maxDiff)
 %
 %Takes in data d, sets up and solves lsqlin() such that:
@@ -12,8 +12,12 @@ function [x] = slopeConstrain(dIn,maxDiff)
 %
 %Read documentation for lsqlin for more info.
 
-if nargin < 2
+
+if ~exist('maxDiff','var')
     maxDiff = 0;
+end
+if ~exist('secondDeriv','var')
+    secondDeriv = 0;
 end
 
 observed = ~isnan(dIn);
@@ -48,6 +52,11 @@ for i = 1:nNodes
         if i < nNodes
             A(i,i+1) = 1;
             A(i,i) = -1;
+        end
+        
+        if secondDeriv && i<nNodes-1
+                A(i,i+1) = 2;
+                A(i,i+2) = -1;
         end
         
     end

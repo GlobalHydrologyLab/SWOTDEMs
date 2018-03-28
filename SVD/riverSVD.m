@@ -23,11 +23,11 @@ opts.targetRL = 10;
 opts.sectMin = 25;
 opts.rmMean = 1;
 opts.iSV = [1,3]; 
-opts.maxDiff = 0.005;
+opts.maxDiff = 0;
 
-river = 'Sacramento';
+% river = 'Sacramento';
 % river = 'Po';
-% river = 'Tanana';
+river = 'Tanana';
 
 switch river
     case 'Sacramento'
@@ -119,14 +119,21 @@ for r = min(section):max(section)
     sAll(inSect,~delCol) = s;
 end
 
+ 
 %constrain profiles
 for i = 1:size(z2All,2)
+    %calc weights
+    weight(:,i) = movstd(zAll(:,i),7);
+    
     
     %unfortunate hack to deal with tanana data in reverse order. should fix
     %this in the earlier data processing script.
     if strcmp(river,'Tanana')
+%         z2All(:,i) = flip(slopeConstrain(flip(z2All(:,i)),opts.maxDiff, ... 
+%             flip(1./weight(:,i)), 0));
         z2All(:,i) = flip(slopeConstrain(flip(z2All(:,i)),opts.maxDiff));
     else
+%         z2All(:,i) = slopeConstrain(z2All(:,i),opts.maxDiff, weight(:,i), 0);
         z2All(:,i) = slopeConstrain(z2All(:,i),opts.maxDiff);
     end
 end

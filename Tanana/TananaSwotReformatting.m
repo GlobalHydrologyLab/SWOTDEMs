@@ -17,23 +17,22 @@ for i = 1 : length(fileName)
     
     if isNodeFile(i)
         csv = importdata( [k(i).folder '/' fileName{i}] );
-        
-        
+            
         %three profiles have 0 elevations in a location...? This filters
         %them.
         hasElev = csv.data(:,13) ~= 0;
           
         simulated(sIndex).name = fileName{i}(1:end-4);
-        simulated(sIndex).reach = csv.data(hasElev,1);
-        simulated(sIndex).node = csv.data(hasElev,20);
-        simulated(sIndex).easting = csv.data(hasElev,22);
-        simulated(sIndex).northing = csv.data(hasElev,23);
-        simulated(sIndex).nHeight = csv.data(hasElev,13);
-        simulated(sIndex).nHeightStd = csv.data(hasElev,14);
-        simulated(sIndex).nWidth = csv.data(hasElev,8);
-        simulated(sIndex).nObs = csv.data(hasElev,6);
-        simulated(sIndex).lat = csv.data(hasElev,2);
-        simulated(sIndex).lon = csv.data(hasElev,3);
+        simulated(sIndex).reach = flip(csv.data(hasElev,1));
+        simulated(sIndex).node = flip(csv.data(hasElev,20));
+        simulated(sIndex).easting = flip(csv.data(hasElev,22));
+        simulated(sIndex).northing = flip(csv.data(hasElev,23));
+        simulated(sIndex).nHeight = flip(csv.data(hasElev,13));
+        simulated(sIndex).nHeightStd = flip(csv.data(hasElev,14));
+        simulated(sIndex).nWidth = flip(csv.data(hasElev,8));
+        simulated(sIndex).nObs = flip(csv.data(hasElev,6));
+        simulated(sIndex).lat = flip(csv.data(hasElev,2));
+        simulated(sIndex).lon = flip(csv.data(hasElev,3));
 
         sIndex = sIndex + 1;
 
@@ -42,9 +41,10 @@ for i = 1 : length(fileName)
     
 end
 
+zField = 'nHeight';
 
-% % % % % clearvars -except simulated truth
-% % % % % save('Tanana/TananaSimulatorData.mat')
+clearvars -except simulated truth zField
+save('Tanana/TananaSimulatorData.mat')
 
 
 

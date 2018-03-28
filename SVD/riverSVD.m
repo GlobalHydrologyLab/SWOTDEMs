@@ -122,22 +122,11 @@ end
  
 %constrain profiles
 for i = 1:size(z2All,2)
-    %calc weights
     weight(:,i) = movstd(zAll(:,i),7);
     
-    
-    %unfortunate hack to deal with tanana data in reverse order. should fix
-    %this in the earlier data processing script.
-    if strcmp(river,'Tanana')
-%         z2All(:,i) = flip(slopeConstrain(flip(z2All(:,i)),opts.maxDiff, ... 
-%             flip(1./weight(:,i)), 0));
-        z2All(:,i) = flip(slopeConstrain(flip(z2All(:,i)),opts.maxDiff));
-    else
-%         z2All(:,i) = slopeConstrain(z2All(:,i),opts.maxDiff, weight(:,i), 0);
-        z2All(:,i) = slopeConstrain(z2All(:,i),opts.maxDiff);
-    end
+%     z2All(:,i) = slopeConstrain(z2All(:,i),opts.maxDiff, weight(:,i), 0);
+    z2All(:,i) = slopeConstrain(z2All(:,i),opts.maxDiff);
 end
-
 
 skm = nanmean(sAll,2)/1000;
 
@@ -151,15 +140,11 @@ svdStats = reachStats(skm,z2All,truthAllign.(zField),opts.targetRL);
 %Renato's gaussian smoothing.
 sigma = opts.targetRL/5;
 for i = 1:size(zAll,2)
-    if strcmp(river,'Tanana')
-        [smoothProfs(:,i),~] = GaussianAveraging(flip(skm),flip(zAll(:,i)),simAllign.nWidth(:,i),opts.targetRL,sigma);
-        smoothProfs(:,i) = flip(smoothProfs(:,i));
-        [smoothSVDProfs(:,i),~] = GaussianAveraging(flip(skm),flip(z2All(:,i)),simAllign.nWidth(:,i),opts.targetRL,sigma);
-        smoothSVDProfs(:,i) = flip(smoothSVDProfs(:,i));
-    else
-        [smoothProfs(:,i),~] = GaussianAveraging(skm,zAll(:,i),simAllign.nWidth(:,i),opts.targetRL,sigma);
-        [smoothSVDProfs(:,i),~] = GaussianAveraging(skm,z2All(:,i),simAllign.nWidth(:,i),opts.targetRL,sigma);
-    end
+    
+    [smoothProfs(:,i),~] = GaussianAveraging(skm,zAll(:,i), ... 
+        simAllign.nWidth(:,i),opts.targetRL,sigma);
+    [smoothSVDProfs(:,i),~] = GaussianAveraging(skm,z2All(:,i), ... 
+        simAllign.nWidth(:,i),opts.targetRL,sigma);
 end
 
 

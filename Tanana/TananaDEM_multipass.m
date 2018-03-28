@@ -3,44 +3,44 @@
 %s,n coordinates and compare.
 
 %% load, transform, and save data
-% clear
-% 
-% %using Legleiter xy2sn.m conversion function
-% addpath('cited_functions/riverKrige');
-% 
-% %load data
-% load('Tanana/TananaSimulatorData.mat')
-% load('Tanana/InterpTruth.mat')
-% %centerline
-% load('Tanana/avgTananaCenterline.mat')
-% centerline = flip(centerline);
-% 
-% % transParam = [3 3 31 length(SRTM) 200]'; 
-% transParam = [1 3 5 length(centerline(:,1)) 100]'; %for swot sim centerline
-% 
-% for i = 1:length(simulated)
-%     [snCoord,~,clOut] = xy2sn(centerline, ... 
-%         [simulated(i).easting, simulated(i).northing],transParam);
-%     xy2snAscendCheck(snCoord(:,1)); 
-% 
-%     simulated(i).sCoord = snCoord(:,1);
-%     simulated(i).nCoord = snCoord(:,2);
-% end
-% 
-% %because all truth data are sampled from the same points, we can shortcut
-% %and calculate s,n once then assign to all.
-% [snCoord,~,clOut] = xy2sn(centerline, ... 
-%     [truth(1).easting, truth(1).northing],transParam);
-% xy2snAscendCheck(snCoord(:,1));
-% 
-% for i = 1:length(simulated) 
-%     truth(i).sCoord = snCoord(:,1);
-%     truth(i).nCoord = snCoord(:,2);
-% end
-% 
-% 
-% clearvars -except simulated transParam truth clOut
-% save('Tanana/transformedTananaData.mat')
+clear
+
+%using Legleiter xy2sn.m conversion function
+addpath('cited_functions/riverKrige');
+
+%load data
+load('Tanana/TananaSimTruth.mat')
+%centerline
+load('Tanana/avgTananaCenterline.mat')
+centerline = flip(centerline); %reversed order.
+
+% transParam = [3 3 31 length(SRTM) 200]'; 
+transParam = [1 3 5 length(centerline(:,1)) 100]'; %for swot sim centerline
+
+for i = 1:length(simulated)
+    [snCoord,~,clOut] = xy2sn(centerline, ... 
+        [simulated(i).easting, simulated(i).northing],transParam);
+    xy2snAscendCheck(snCoord(:,1)); 
+
+    simulated(i).sCoord = snCoord(:,1);
+    simulated(i).nCoord = snCoord(:,2);
+end
+
+
+
+
+for i = 1:length(simulated) 
+    [snCoord,~,clOut] = xy2sn(centerline, ... 
+        [truth(i).easting, truth(i).northing],transParam);
+    xy2snAscendCheck(snCoord(:,1));
+
+    truth(i).sCoord = snCoord(:,1);
+    truth(i).nCoord = snCoord(:,2);
+end
+
+
+% % % clearvars -except simulated transParam truth clOut
+% % % save('Tanana/transformedTananaData.mat')
 
 %% Load transformed data from last section
 %the coordinate transformation takes far longer than an other process, so

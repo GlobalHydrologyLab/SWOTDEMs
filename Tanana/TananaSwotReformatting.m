@@ -25,19 +25,19 @@ for i = 1 : length(fileName)
           
         simulated(sIndex).name = fileName{i}(1:end-4);
         simulated(sIndex).reach = flip(csv.data(hasElev,1));
-        simulated(sIndex).node = flip(csv.data(hasElev,20));
+        simulated(sIndex).node = 870 - flip(csv.data(hasElev,20)); %reverse the numerical order as well
         simulated(sIndex).easting = flip(csv.data(hasElev,22));
         simulated(sIndex).northing = flip(csv.data(hasElev,23));
         simulated(sIndex).nHeight = flip(csv.data(hasElev,13));
         simulated(sIndex).nHeightStd = flip(csv.data(hasElev,14));
         simulated(sIndex).nWidth = flip(csv.data(hasElev,8));
+        simulated(sIndex).nWidthStd = flip(csv.data(hasElev,9));
         simulated(sIndex).nObs = flip(csv.data(hasElev,6));
         simulated(sIndex).lat = flip(csv.data(hasElev,2));
         simulated(sIndex).lon = flip(csv.data(hasElev,3));
 
         sIndex = sIndex + 1;
-
-        
+   
     end
     
 end

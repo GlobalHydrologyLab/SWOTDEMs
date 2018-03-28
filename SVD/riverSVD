@@ -16,18 +16,18 @@
 %--------------------------------------------------------------------------
 
 % clear
-clearvars -except SVDStats SIMStats smoothStats smoothSVDStats
+clearvars -except SVDStats SIMStats smoothStats smoothSVDStats opts
 close all
 
 opts.targetRL = 10;
-opts.sectMin = 30;
+opts.sectMin = 25;
 opts.rmMean = 1;
-opts.iSV = [1]; 
+opts.iSV = [1,3]; 
 opts.maxDiff = 0.005;
 
-% river = 'Sacramento';
+river = 'Sacramento';
 % river = 'Po';
-river = 'Tanana';
+% river = 'Tanana';
 
 switch river
     case 'Sacramento'
@@ -61,7 +61,7 @@ end
 %all sections have >= opts.sectMin rows
 nProf = length(simulated);
 simAllign = nodeAllign(simulated);
-zAll = simAllign.(zField);
+% zAll = simAllign.(zField);
 
 %trim truth to sim extent
 nodeRng = [min(simAllign.node(1,:)), max(simAllign.node(end,:))];
@@ -139,19 +139,38 @@ z2Err = z2All - truthAllign.(zField);
 
 simStats = reachStats(skm,zAll,truthAllign.(zField),opts.targetRL);
 svdStats = reachStats(skm,z2All,truthAllign.(zField),opts.targetRL);
-
+%% 
 
 %Renato's gaussian smoothing.
+sigma = opts.targetRL/5;
 for i = 1:size(zAll,2)
-    [smoothProfs(:,i),~] = GaussianAveraging(skm,zAll(:,i),simAllign.nWidth(:,i),10,2);
-    [smoothSVDProfs(:,i),~] = GaussianAveraging(skm,z2All(:,i),simAllign.nWidth(:,i),10,2);
+    if strcmp(river,'Tanana')
+        [smoothProfs(:,i),~] = GaussianAveraging(flip(skm),flip(zAll(:,i)),simAllign.nWidth(:,i),opts.targetRL,sigma);
+        smoothProfs(:,i) = flip(smoothProfs(:,i));
+        [smoothSVDProfs(:,i),~] = GaussianAveraging(flip(skm),flip(z2All(:,i)),simAllign.nWidth(:,i),opts.targetRL,sigma);
+        smoothSVDProfs(:,i) = flip(smoothSVDProfs(:,i));
+    else
+        [smoothProfs(:,i),~] = GaussianAveraging(skm,zAll(:,i),simAllign.nWidth(:,i),opts.targetRL,sigma);
+        [smoothSVDProfs(:,i),~] = GaussianAveraging(skm,z2All(:,i),simAllign.nWidth(:,i),opts.targetRL,sigma);
+    end
 end
 
 
 smoothStats.(river) = reachStats(skm,smoothProfs,truthAllign.(zField),opts.targetRL);
+smoothStats.(river).x = skm;
+smoothStats.(river).z = smoothProfs;
+
 smoothSVDStats.(river) = reachStats(skm,smoothSVDProfs,truthAllign.(zField),opts.targetRL);
+smoothSVDStats.(river).x = skm;
+smoothSVDStats.(river).z = smoothSVDProfs;
+
 SVDStats.(river) = svdStats;
+SVDStats.(river).x = skm;
+SVDStats.(river).z = z2All;
+
 SIMStats.(river) = simStats;
+SIMStats.(river).x = skm;
+SIMStats.(river).z = zAll;
 %% 
 %--------------------------------------------------------------------------
 % plots
@@ -167,12 +186,12 @@ SIMStats.(river) = simStats;
 % colormap([1 1 1; c])
 
 % %coverage/elevation plot
-figure()
-imAlpha=ones(size(zAll));
-imAlpha(isnan(zAll))=0;
-imagesc(zAll,'AlphaData',imAlpha);
-colormap(brewermap(64,'YlGnBu'))
-set(gca,'color',0*[1 1 1]);
+% figure()
+% imAlpha=ones(size(zAll));
+% imAlpha(isnan(zAll))=0;
+% imagesc(zAll,'AlphaData',imAlpha);
+% colormap(brewermap(64,'YlGnBu'))
+% set(gca,'color',0*[1 1 1]);
 
 %singular values
 figure()
@@ -249,8 +268,10 @@ legend('original','LRA')
 
 svdStats.slopePctChange = (nanmean(svdStats.slopeMAE)-nanmean(simStats.slopeMAE))./nanmean(simStats.slopeMAE) * 100;
 subplot(2,2,4)
-text('Units','normalized','position',[0.05 0.8],'String',['Sim: ' num2str(nanmean(simStats.slopeMAE)) ' cm/km'], 'FontSize',24)
-text('Units','normalized','position',[0.05 0.6],'String',['LRA: ' num2str(nanmean(svdStats.slopeMAE)) ' cm/km'], 'FontSize',24)
+text('Units','normalized','position',[0.05 0.8],'String', ... 
+    ['Sim: ' num2str(nanmean(simStats.slopeMAE)) ' cm/km'], 'FontSize',24)
+text('Units','normalized','position',[0.05 0.6],'String', ... 
+    ['LRA: ' num2str(nanmean(svdStats.slopeMAE)) ' cm/km'], 'FontSize',24)
 text('Units','normalized','position',[0.05 0.4],'String', ... 
     ['% change: ' num2str(svdStats.slopePctChange)], 'FontSize',24)
 set(gca,'visible','off')

@@ -4,6 +4,7 @@
 
 clear
 
+zField = 'nHeight';
 
 %find shapefiles in the directory
 k = dir('/Users/Ted/Documents/Tanana/SWOTSimulator/TananaRiverObs');
@@ -41,10 +42,61 @@ for i = 1 : length(fileName)
     
 end
 
-zField = 'nHeight';
+%% truth data
+% sampled input DEMs at the centerline locations
+
+%reorder truth data so that we can directly compare with the simulator data
+%by indeces.
+
+simDataOrder = ['elevs_2 ';
+    'elevs_23';
+    'elevs_44';
+    'elevs_65';
+    'elevs_5 ';
+    'elevs_26';
+    'elevs_47';
+    'elevs_68';
+    'elevs_6 ';
+    'elevs_27';
+    'elevs_48';
+    'elevs_69'];
+
+k = dir('/Users/Ted/Documents/Tanana/SWOTSimulator/TananaRiverObs/*.tif');
+
+for i = 1:length(k)
+    p = [k(i).folder '/' k(i).name];
+    t(i).name = k(i).name(1:end-4);
+    
+    s2 = cellstr(char(t(i).name));
+    simID(i) = find(strcmp(simDataOrder,s2));
+    
+    cx = simulated(simID(i)).easting;
+    cy = simulated(simID(i)).northing;
+    
+    prof = geotiffinterp(p, cx, cy,'nearest','buffer',3,'show');
+    
+    %----------------------------------------------------------------------
+    prof = prof + 11.6; %ellipsoid correction per Elizabeth
+    %----------------------------------------------------------------------
+    
+    
+%     %masked areas (where centerline is outside river) have random large
+%     %negative numbers, set to NaN here.
+    
+    t(i).simName = simulated(simID(i)).name;
+    t(i).node = simulated(simID(i)).node;
+    t(i).easting = cx;
+    t(i).northing = cy;
+    t(i).nHeight = prof;
+    
+end
+
+truth = t;
+
+%% 
 
 clearvars -except simulated truth zField
-save('Tanana/TananaSimulatorData.mat')
+save('Tanana/TananaSimTruth.mat')
 
 
 

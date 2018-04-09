@@ -11,23 +11,21 @@
 %       results and make comparisons of errors kind of disingenuous.
 % x-- Hard-coded removal for now. I think this is fine.
 %
-% - make sure # of singular values chosen is providing best results.
-%
 %--------------------------------------------------------------------------
 
 % clear
-clearvars -except SVDStats SIMStats smoothStats smoothSVDStats opts
+clearvars -except SVDStats SIMStats smoothStats opts
 close all
 
 opts.targetRL = 10;
 opts.sectMin = 25;
 opts.rmMean = 1;
 opts.iSV = [1,3]; 
-opts.maxDiff = 0;
+opts.maxDiff = 0.005; %set high to 'turn off' constraint.
 
-% river = 'Sacramento';
+river = 'Sacramento';
 % river = 'Po';
-river = 'Tanana';
+% river = 'Tanana';
 
 switch river
     case 'Sacramento'
@@ -49,13 +47,14 @@ switch river
     case 'Tanana'
         load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Tanana/transformedTananaData.mat')
         zField = 'nHeight';
-        simulated = trimFields(simulated,99:829);
-        truth = trimFields(truth,99:829);
+        simulated(9:12) = trimFields(simulated(9:12),250:675);
+        truth(9:12) = trimFields(truth(9:12),250:675);
+        simulated = trimFields(simulated,25:600);
+        truth = trimFields(truth,25:600);
+        opts.maxDiff = opts.maxDiff / 2; %100m node spacing
 end
 
-
 % clearvars -except simulated truth zField opts
-
 
 %Group data into matrices without gaps, intelligently deleting data so that
 %all sections have >= opts.sectMin rows
@@ -71,6 +70,12 @@ truthAllign = nodeAllign(truth);
 
 %subSectByObs choses the rectangular matrices for svd
 [section, zAll] = subsectByObs(simAllign.(zField),opts.sectMin);
+
+%remove bias
+observedBy = ~isnan(zAll);
+truthAllign.(zField)(~observedBy) = NaN; %mask
+zAll = zAll - nanmean(zAll - truthAllign.(zField),1);
+
 
 %init. matrices for storing section data
 dim = size(simAllign.sCoord);
@@ -122,47 +127,49 @@ end
  
 %constrain profiles
 for i = 1:size(z2All,2)
-    weight(:,i) = movstd(zAll(:,i),7);
-    
+%     weight(:,i) = movstd(zAll(:,i),7);
 %     z2All(:,i) = slopeConstrain(z2All(:,i),opts.maxDiff, weight(:,i), 0);
+
     z2All(:,i) = slopeConstrain(z2All(:,i),opts.maxDiff);
 end
+
+% avgProf = slopeConstrain(z2All,opts.maxDiff);
+
 
 skm = nanmean(sAll,2)/1000;
 
 zErr = zAll - truthAllign.(zField);
 z2Err = z2All - truthAllign.(zField);
 
+
 simStats = reachStats(skm,zAll,truthAllign.(zField),opts.targetRL);
 svdStats = reachStats(skm,z2All,truthAllign.(zField),opts.targetRL);
+% avgStats = reachStats(skm,avgProf,nanmean(truthAllign.(zField),2), opts.targetRL);
 %% 
 
 %Renato's gaussian smoothing.
 sigma = opts.targetRL/5;
 for i = 1:size(zAll,2)
-    
     [smoothProfs(:,i),~] = GaussianAveraging(skm,zAll(:,i), ... 
         simAllign.nWidth(:,i),opts.targetRL,sigma);
-    [smoothSVDProfs(:,i),~] = GaussianAveraging(skm,z2All(:,i), ... 
-        simAllign.nWidth(:,i),opts.targetRL,sigma);
 end
-
+zSErr = smoothProfs - truthAllign.(zField);
 
 smoothStats.(river) = reachStats(skm,smoothProfs,truthAllign.(zField),opts.targetRL);
 smoothStats.(river).x = skm;
 smoothStats.(river).z = smoothProfs;
-
-smoothSVDStats.(river) = reachStats(skm,smoothSVDProfs,truthAllign.(zField),opts.targetRL);
-smoothSVDStats.(river).x = skm;
-smoothSVDStats.(river).z = smoothSVDProfs;
+smoothStats.(river).zErr = zSErr;
 
 SVDStats.(river) = svdStats;
 SVDStats.(river).x = skm;
 SVDStats.(river).z = z2All;
+SVDStats.(river).zErr = z2Err;
 
 SIMStats.(river) = simStats;
 SIMStats.(river).x = skm;
 SIMStats.(river).z = zAll;
+SIMStats.(river).zErr = zErr;
+
 %% 
 %--------------------------------------------------------------------------
 % plots
@@ -267,7 +274,7 @@ text('Units','normalized','position',[0.05 0.6],'String', ...
 text('Units','normalized','position',[0.05 0.4],'String', ... 
     ['% change: ' num2str(svdStats.slopePctChange)], 'FontSize',24)
 set(gca,'visible','off')
-
+SVDStats.(river).slopePctChange = svdStats.slopePctChange;
 % subplot(2,2,4)
 % scatter(simStats.slopeRRMSE, svdStats.slopeRRMSE,[],nCol,'filled')
 % scatter1to1(gca,'origin');

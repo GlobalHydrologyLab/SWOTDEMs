@@ -23,7 +23,7 @@ load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Sacramento/SWOTSimData/eastNorthNodes
 sIndex=1;
 tIndex=1;
 
-for i = 1 : length(fileName)
+for i = 1 : 1%length(fileName)
     
     shapefile = shaperead( [k(i).folder '/' fileName{i}] );
     

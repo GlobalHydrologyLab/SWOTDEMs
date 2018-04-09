@@ -5,7 +5,7 @@
 % clear
 % 
 % %using Legleiter xy2sn.m conversion function
-% addpath('cited_functions/riverKrige');
+% addpath('/Users/Ted/Documents/MATLAB/cited_functions/riverKrige');
 % 
 % %load data
 % load('Sacramento/drawnCenterline.mat') %hand drawn centerline

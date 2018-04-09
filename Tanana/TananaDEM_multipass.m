@@ -6,7 +6,7 @@
 clear
 
 %using Legleiter xy2sn.m conversion function
-addpath('cited_functions/riverKrige');
+addpath('/Users/Ted/Documents/MATLAB/cited_functions/riverKrige');
 
 %load data
 load('Tanana/TananaSimTruth.mat')
@@ -15,18 +15,16 @@ load('Tanana/avgTananaCenterline.mat')
 centerline = flip(centerline); %reversed order.
 
 % transParam = [3 3 31 length(SRTM) 200]'; 
-transParam = [1 3 5 length(centerline(:,1)) 100]'; %for swot sim centerline
+transParam = [1 3 5 length(centerline(:,1)) 150]'; %for swot sim centerline
 
 for i = 1:length(simulated)
-    [snCoord,~,clOut] = xy2sn(centerline, ... 
+    [snCoord,~,clOut,~,iMiss] = xy2sn(centerline, ... 
         [simulated(i).easting, simulated(i).northing],transParam);
     xy2snAscendCheck(snCoord(:,1)); 
 
     simulated(i).sCoord = snCoord(:,1);
     simulated(i).nCoord = snCoord(:,2);
 end
-
-
 
 
 for i = 1:length(simulated) 
@@ -38,9 +36,22 @@ for i = 1:length(simulated)
     truth(i).nCoord = snCoord(:,2);
 end
 
+load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Tanana/DEMProfiles/demProfiles.mat')
 
-% % % clearvars -except simulated transParam truth clOut
-% % % save('Tanana/transformedTananaData.mat')
+snCoord = xy2sn(centerline,ArcticDEM(:,1:2),transParam);
+xy2snAscendCheck(snCoord(:,1));
+ArcticDEM(:,4:5) = snCoord;
+
+snCoord = xy2sn(centerline,TanDEMX(:,1:2),transParam);
+xy2snAscendCheck(snCoord(:,1));
+TanDEMX(:,4:5) = snCoord;
+
+snCoord = xy2sn(centerline,MERIT(:,1:2),transParam);
+xy2snAscendCheck(snCoord(:,1));
+MERIT(:,4:5) = snCoord;
+
+% % % % clearvars -except simulated transParam truth clOut
+% % % % save('Tanana/transformedTananaData.mat')
 
 %% Load transformed data from last section
 %the coordinate transformation takes far longer than an other process, so
@@ -102,37 +113,10 @@ MAEsim = mean(abs(simAvg.(zField) - truthAvg.(zField)));
 RMSEsimAvg = sqrt(nanmean((simAvg.(zField) - truthAvg.(zField)).^2));
 RMSEsmooth = sqrt(nanmean((simSmooth - truthAvg.nHeight).^2));
 
-%% Define reaches
+%% reach stats
 
-nodeRng = [min(simAllign.node(1,:)), max(simAllign.node(end,:))];
-targetRLkm = 10;
-reachVec = equiReach(slm.x./1000,targetRLkm);
-
-[simulated.reach] = deal(reachVec);
-[truth.reach] = deal(reachVec);
-
-%% Reach stats
-reaches = unique(reachVec)';
-
-for r = reaches
-    inReach = reachVec == r;
-    RL(r) = range(simAvg.sCoord(inReach));
-    if sum(inReach)>= 0.9*sum(reachVec==r)
-        fitSim = polyfit(simAvg.sCoord(inReach), simAvg.(zField)(inReach),1);
-        fitSLM = polyfit(slm.x(inReach),slmProf(inReach),1);
-        
-        fitTruth = polyfit(truthAvg.sCoord(inReach), truthAvg.(zField)(inReach),1);
-
-        SimSlopeErr(r) = (fitTruth(1) - fitSim(1)) .*100000;
-        SLMSlopeErr(r) = (fitTruth(1) - fitSLM(1)) .*100000;
-        SimRelSlopeErr(r) = SimSlopeErr(r) / fitTruth(1) .*100;
-        SLMRelSlopeErr(r) = SLMSlopeErr(r) / fitTruth(1) .*100;
-    end
-end
-
-simRRMSE = sqrt(nanmean(SimRelSlopeErr.^2));
-SLMRRMSE = sqrt(nanmean(SLMRelSlopeErr.^2));
-slmMAE = nanmean(abs(SLMSlopeErr));
+skm = nanmean(
+reachStats(
 
 %% plot things
 close all
@@ -152,11 +136,4 @@ hold on
 for i = 1:length(truth)
 plot(truth(i).sCoord(profMask(:,i)),truth(i).nHeight(profMask(:,i)),'k-','Linewidth',2)
 end
-
-% set(gcf,'Units','normalized','Position', [0.3, 0.2, 0.5, 0.6])
-
-% figure()
-% plot(simAvg.sCoord/1000,simAvg.(zField),'r-','Linewidth',2)
-% hold on
-% plot(truthAvg.sCoord/1000,truthAvg.(zField),'k','Linewidth',2)
 

@@ -42,6 +42,40 @@ for i = 1 : length(fileName)
     
 end
 
+%half-finished attempt to merge 100m nodes together.
+
+% simAllign = nodeAllign(simulated);
+% 
+% fieldNames = fields(simAllign);
+% numFields = numel(fieldNames);
+% nProfs = length(simulated);
+% 
+% for i = 1:nProfs
+%     
+%     
+%     nNodes = length(simulated(i).(zField));
+%     colIDs = [1:2:nNodes-1; 2:2:nNodes]';
+%     
+%     %nObs weights
+%     nObs = simulated(i).nObs(colIDs);
+%     nObsRowTotal = nansum(nObs,2);
+%     nObsWeight = nObs./nObsRowTotal;
+%     for j = 1:numFields
+% 
+%         %check it's not a field like 'name' with 1 value
+%         if size(simulated(i).(fieldNames{j}),1) ~= 1
+%             if strcmp(fieldNames{j},'nObs')
+%                 simulated(i).nObs = sum(simulated(i).nObs(colIDs),2);
+%             elseif strcmp(fieldNames{j},'node')
+%                 simulated(i).node = floor(mean(simulated(i).node(colIDs),2));
+%             else
+%                 simulated(i).(fieldNames{j}) =  ...
+%                     nansum(simulated(i).(fieldNames{j})(colIDs).*nObsWeight,2);
+%             end
+%         end
+%     end
+% end
+
 %% truth data
 % sampled input DEMs at the centerline locations
 
@@ -95,8 +129,8 @@ truth = t;
 
 %% 
 
-clearvars -except simulated truth zField
-save('Tanana/TananaSimTruth.mat')
+% % % % % % % clearvars -except simulated truth zField
+% % % % % % % save('Tanana/TananaSimTruth.mat')
 
 
 

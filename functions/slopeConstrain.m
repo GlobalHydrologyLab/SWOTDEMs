@@ -43,6 +43,9 @@ A = zeros(nNodes);
 b = zeros(nNodes,1) + maxDiff;
 
 
+% Objective function:   Cx - d
+% contrained by:        Ax <= b
+
 firstRow = 1;
 for i = 1:nNodes
 %     notNan = observed(i,:);
@@ -51,7 +54,7 @@ for i = 1:nNodes
     if nd ~=0
         endRow = firstRow+nd-1;
 
-        C(firstRow:endRow,i) = ones(nd,1) ./ weight(i,observed(i,:));
+        C(firstRow:endRow,i) = ones(nd,1) ./ weight(i,observed(i,:))';
         d(firstRow:endRow,1) = dIn(i,observed(i,:)) ./ weight(i,observed(i,:));
         
         firstRow = endRow + 1;

@@ -18,14 +18,14 @@ clearvars -except SVDStats SIMStats smoothStats opts
 close all
 
 opts.targetRL = 10;
-opts.sectMin = 25;
+opts.sectMin = 3;
 opts.rmMean = 1;
 opts.iSV = [1,3]; 
-opts.maxDiff = 0.005; %set high to 'turn off' constraint.
+opts.maxDiff = 0.01; %set high to 'turn off' constraint.
 
-river = 'Sacramento';
+% river = 'Sacramento';
 % river = 'Po';
-% river = 'Tanana';
+river = 'Tanana';
 
 switch river
     case 'Sacramento'
@@ -156,19 +156,24 @@ end
 zSErr = smoothProfs - truthAllign.(zField);
 
 smoothStats.(river) = reachStats(skm,smoothProfs,truthAllign.(zField),opts.targetRL);
-smoothStats.(river).x = skm;
+smoothStats.(river).s = skm;
 smoothStats.(river).z = smoothProfs;
 smoothStats.(river).zErr = zSErr;
 
 SVDStats.(river) = svdStats;
-SVDStats.(river).x = skm;
+SVDStats.(river).s = skm;
 SVDStats.(river).z = z2All;
 SVDStats.(river).zErr = z2Err;
+SVDStats.(river).x = simAllign.easting;
+SVDStats.(river).y = simAllign.northing;
+SVDStats.(river).meanProf = slopeConstrain(z2All,opts.maxDiff);
 
 SIMStats.(river) = simStats;
-SIMStats.(river).x = skm;
+SIMStats.(river).s = skm;
 SIMStats.(river).z = zAll;
 SIMStats.(river).zErr = zErr;
+SIMStats.(river).x = simAllign.easting;
+SIMStats.(river).y = simAllign.northing;
 
 %% 
 %--------------------------------------------------------------------------
@@ -311,29 +316,26 @@ SVDStats.(river).slopePctChange = svdStats.slopePctChange;
 
 %% gif
 % 
-% delete 'test.gif'
-% fileName = '/Users/Ted/Documents/GHL_meetings/Seminar/18.2.28/test.gif';
+% fileName = '/Users/Ted/Documents/MastersCommittee/firstMeeting/figs/method/16-1.gif';
+% delete(fileName)
 % figure()
 % set(gcf,'Units','Normalized','Position',[0.319 0.495 0.352 0.25])
-% plot(nanmean(s,2)/1000,SVRecomp(U,S,V,1))
-% text('Units','normalized','position',[0.6 0.8],'String','rank: 1', 'FontSize',24)
+% plot(nanmean(s,2)/1000,SVRecomp(U,S,V,1:16)+mz)
+% text('Units','normalized','position',[0.6 0.8],'String','rank: 16', 'FontSize',24)
 % xlim = [16 26]; ylim = [28 35];
 % set(gca,'XLim',xlim, 'YLim',ylim)
 % box off
 % xlabel('Flow Distance (km)')
 % ylabel('Elevation (m)')
-% gif(fileName,'DelayTime',0.5,'frame',gcf)
+% gif(fileName,'DelayTime',0.75,'frame',gcf)
 % 
-% n(1) = norm(SVRecomp(U,S,V,1)-z);
 % 
-% for i = 2:numel(diag(S))
-% plot(nanmean(s,2)/1000,SVRecomp(U,S,V,1:i))
+% for i = flip(1:15)
+% plot(nanmean(s,2)/1000,SVRecomp(U,S,V,1:i)+mz)
 % box off
 % text('Units','normalized','position',[0.6 0.8],'String',['rank: ' num2str(i)], 'FontSize',24)
 % set(gca,'XLim',xlim, 'YLim',ylim)
 % xlabel('Flow Distance (km)')
 % ylabel('Elevation (m)')
 % gif
-% 
-% n(i) = norm(SVRecomp(U,S,V,1:i)-z);
 % end

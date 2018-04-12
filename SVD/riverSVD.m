@@ -14,13 +14,11 @@
 %--------------------------------------------------------------------------
 
 % clear
-clearvars -except SVDStats SIMStats smoothStats opts
+clearvars -except SVDStats SIMStats smoothStats
 close all
 
 opts.targetRL = 10;
-opts.sectMin = 3;
-opts.rmMean = 1;
-opts.iSV = [1,3]; 
+opts.sectMin = 4;
 opts.maxDiff = 0.01; %set high to 'turn off' constraint.
 
 % river = 'Sacramento';
@@ -37,12 +35,14 @@ switch river
         end
         simulated(6) = [];
         truth(6) = [];
+        groups = [ones(1,8) ones(1,8)+1]';
         
     case 'Po'
         load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Po/transformedPo_3Pass.mat')
         zField = 'nHeight';
         simulated(1:17) = trimFields(simulated(1:17),205:400);
         truth(1:17) = trimFields(truth(1:17),205:400);
+        groups = [ones(1,17) ones(1,34)+1 ones(1,18)+2]';
 
     case 'Tanana'
         load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Tanana/transformedTananaData.mat')
@@ -52,6 +52,7 @@ switch river
         simulated = trimFields(simulated,25:600);
         truth = trimFields(truth,25:600);
         opts.maxDiff = opts.maxDiff / 2; %100m node spacing
+        groups = [ones(1,4) ones(1,4)+1 ones(1,4)+2]';
 end
 
 % clearvars -except simulated truth zField opts
@@ -99,25 +100,17 @@ for r = min(section):max(section)
     for i = 1:length(mMiss)
         s(mMiss(i),nMiss(i)) = nanmean(s(mMiss(i),:));
     end
-    
-    if opts.rmMean
-        %remove mean from each node.
-        mz = nanmean(z,2);
-        zresid = z - mz;
-        [U,S,V] = svd(zresid);
-    else
-        [U,S,V] = svd(z);
-    end
-    
 
-    %now modify S, removing smaller components.
-%     z2 = SVRecomp(U,S,V,1:iSV(r));
-    z2 = SVRecomp(U,S,V,opts.iSV);
+    %remove mean from each node.
+    mz = nanmean(z,2);
+    zresid = z - mz;
+
+    grp = groups(~delCol);
+    [U,S,V,opts.iSV{r},opts.iSV_orbitVec{r}] = parallelAnalysis(zresid,100,grp,0.05);
+
+    z2 = SVRecomp(U,S,V,opts.iSV{r});
     
-    %recombine
-    if opts.rmMean
-        z2 = z2 + mz;
-    end
+    z2 = z2 + mz;
   
     % join section data for later comparison  
     z2All(inSect,~delCol) = z2;
@@ -174,6 +167,8 @@ SIMStats.(river).z = zAll;
 SIMStats.(river).zErr = zErr;
 SIMStats.(river).x = simAllign.easting;
 SIMStats.(river).y = simAllign.northing;
+
+rOpts.(river) = opts;
 
 %% 
 %--------------------------------------------------------------------------
@@ -257,21 +252,8 @@ xlabel('Simulated MAE(cm/km)')
 ylabel('LRA MAE(cm/km)')
 title('MAE')
 % 
-subplot(2,2,2)
-scatter(simStats.slopeRMSE, svdStats.slopeRMSE,'filled')
-scatter1to1(gca,'origin');
-xlabel('Simulated RMSE(cm/km)')
-ylabel('LRA RMSE(cm/km)')
-title('RMSE')
-
-subplot(2,2,3)
-ksdensity(simStats.slopeErr(:))
-hold on
-ksdensity(svdStats.slopeErr(:))
-legend('original','LRA')
-
 svdStats.slopePctChange = (nanmean(svdStats.slopeMAE)-nanmean(simStats.slopeMAE))./nanmean(simStats.slopeMAE) * 100;
-subplot(2,2,4)
+subplot(2,2,2)
 text('Units','normalized','position',[0.05 0.8],'String', ... 
     ['Sim: ' num2str(nanmean(simStats.slopeMAE)) ' cm/km'], 'FontSize',24)
 text('Units','normalized','position',[0.05 0.6],'String', ... 
@@ -280,6 +262,26 @@ text('Units','normalized','position',[0.05 0.4],'String', ...
     ['% change: ' num2str(svdStats.slopePctChange)], 'FontSize',24)
 set(gca,'visible','off')
 SVDStats.(river).slopePctChange = svdStats.slopePctChange;
+
+subplot(2,2,3)
+scatter(simStats.nodeMAE.*100, svdStats.nodeMAE.*100,'filled')
+scatter1to1(gca,'origin');
+xlabel('Simulated MAE(cm)')
+ylabel('LRA MAE(cm)')
+title('MAE')
+% 
+svdStats.nodePctChange = (nanmean(svdStats.nodeMAE)-nanmean(simStats.nodeMAE))./nanmean(simStats.nodeMAE) * 100;
+subplot(2,2,4)
+text('Units','normalized','position',[0.05 0.8],'String', ... 
+    ['Sim: ' num2str(nanmean(simStats.nodeMAE).*100) ' cm'], 'FontSize',24)
+text('Units','normalized','position',[0.05 0.6],'String', ... 
+    ['LRA: ' num2str(nanmean(svdStats.nodeMAE).*100) ' cm'], 'FontSize',24)
+text('Units','normalized','position',[0.05 0.4],'String', ... 
+    ['% change: ' num2str(svdStats.nodePctChange)], 'FontSize',24)
+set(gca,'visible','off')
+SVDStats.(river).nodePctChange = svdStats.nodePctChange;
+
+
 % subplot(2,2,4)
 % scatter(simStats.slopeRRMSE, svdStats.slopeRRMSE,[],nCol,'filled')
 % scatter1to1(gca,'origin');

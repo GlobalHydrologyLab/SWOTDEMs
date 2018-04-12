@@ -13,6 +13,8 @@ function [U,S,V,iSV,iSig] = parallelAnalysis(z,n,grp,p,plotOpt)
 %
 % plotOpt is a binary option to plot V vectors that were removed after
 % parallel analysis.
+%
+% 4/12/18 Ted Langhorst
 %%
 if ~exist('n','var')
     error('Must enter number of iterations as second')

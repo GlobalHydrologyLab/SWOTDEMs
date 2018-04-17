@@ -14,11 +14,11 @@
 %--------------------------------------------------------------------------
 
 % clear
-clearvars -except SVDStats SIMStats smoothStats
+clearvars -except SVDStats SIMStats smoothStats rOpts
 close all
 
 opts.targetRL = 10;
-opts.sectMin = 4;
+opts.sectMin = 25;
 opts.maxDiff = 0.01; %set high to 'turn off' constraint.
 
 % river = 'Sacramento';
@@ -66,7 +66,6 @@ simAllign = nodeAllign(simulated);
 %trim truth to sim extent
 nodeRng = [min(simAllign.node(1,:)), max(simAllign.node(end,:))];
 truth = trimFields(truth,nodeRng);
-
 truthAllign = nodeAllign(truth);
 
 %subSectByObs choses the rectangular matrices for svd
@@ -83,7 +82,7 @@ dim = size(simAllign.sCoord);
 z2All = nan(dim);
 sAll = nan(dim);
 
-for r = min(section):max(section)
+for r = min(section):3%max(section)
     inSect = section == r;
     
     simReach = trimFields(simAllign,inSect);
@@ -146,25 +145,15 @@ for i = 1:size(zAll,2)
     [smoothProfs(:,i),~] = GaussianAveraging(skm,zAll(:,i), ... 
         simAllign.nWidth(:,i),opts.targetRL,sigma);
 end
-zSErr = smoothProfs - truthAllign.(zField);
 
 smoothStats.(river) = reachStats(skm,smoothProfs,truthAllign.(zField),opts.targetRL);
-smoothStats.(river).s = skm;
-smoothStats.(river).z = smoothProfs;
-smoothStats.(river).zErr = zSErr;
 
 SVDStats.(river) = svdStats;
-SVDStats.(river).s = skm;
-SVDStats.(river).z = z2All;
-SVDStats.(river).zErr = z2Err;
 SVDStats.(river).x = simAllign.easting;
 SVDStats.(river).y = simAllign.northing;
 SVDStats.(river).meanProf = slopeConstrain(z2All,opts.maxDiff);
 
 SIMStats.(river) = simStats;
-SIMStats.(river).s = skm;
-SIMStats.(river).z = zAll;
-SIMStats.(river).zErr = zErr;
 SIMStats.(river).x = simAllign.easting;
 SIMStats.(river).y = simAllign.northing;
 
@@ -208,7 +197,6 @@ subplot(2,1,1);
 plot(skm,zAll)
 % plot(skm,truthAllign.(zField))
 hold on
-% plot(skm,truthAllign.(zField)(:,3),'k','Linewidth',2)
 xlabel('Flow Distance (km)')
 ylabel('Elevation (m)')
 title('Original Simulation')
@@ -216,7 +204,6 @@ title('Original Simulation')
 subplot(2,1,2);
 plot(skm,z2All)
 hold on
-% plot(skm,truthAllign.(zField)(:,3),'k','Linewidth',2)
 xlabel('Flow Distance (km)')
 ylabel('Elevation (m)')
 title('Low-Rank Approximation')
@@ -234,15 +221,6 @@ title('Low-Rank Approximation')
 allAxes = findobj(handle, 'type', 'axes');
 linkaxes(allAxes);
 set(gcf,'Units','normalized','Position',[0.013672 0.013194 0.59922 0.91528])
-
-% %epdf of all node errors
-% figure()
-% ksdensity(reshape(zErr,[],1))
-% hold on
-% ksdensity(reshape(z2Err,[],1))
-% xlabel('Elevation Error (m)')
-% title('EPDF of Node Errors')
-% legend('Original Data','Low Rank')
 
 figure()
 subplot(2,2,1)

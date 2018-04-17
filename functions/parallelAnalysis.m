@@ -46,14 +46,6 @@ SPAt = diag(mean(St,3));
 
 maskPA = diag(S) >= SPAt; %factors according to PA
 
-figure
-bar(diag(S))
-hold on
-bar(diag(S).*maskPA,'k')
-plot(SPAt,'r--','Linewidth',2)
-hold off
-
-
 %% Group Test
 [groups,~,grpIDs] = unique(grp);
 iSig = zeros(size(V,2),1);
@@ -83,6 +75,16 @@ end
 iSig = find(iSig);
 maskPA(iSig) = 0;
 iSV = find(maskPA); %passes PA but not significant by group
+
+sVals = diag(S);
+
+figure
+bar(sVals)
+hold on
+bar(sVals(find(maskPA)),'k')
+plot(SPAt,'r--','Linewidth',2)
+hold off
+
 
 end
 

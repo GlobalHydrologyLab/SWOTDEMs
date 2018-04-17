@@ -51,7 +51,7 @@ for r = 1:nReaches
             
             testStats.slope(r,p) = fitTest(1)*100;
             testStats.slopeErr(r,p) = fitTest(1)*100 - fitTruth(1)*100;
-            testStats.zErr(r,p) = mean(testZRP) - mean(truthZRP);
+            testStats.reachAvgZErr(r,p) = mean(testZRP) - mean(truthZRP);
             
         end
         
@@ -63,6 +63,9 @@ testStats.slopeMAE = nanmean(abs(testStats.slopeErr),1);
 testStats.slopeRMSE = sqrt(nanmean(testStats.slopeErr.^2,1));
 testStats.nodeMAE = nanmean(abs(testZ - truthZ),1);
 testStats.nodeRMSE = sqrt(nanmean((testZ - truthZ).^2,1));
+testStats.s = skm;
+testStats.z = testZ;
+testStats.zErr = testZ - truthZ;
 
 end
 

@@ -18,12 +18,12 @@ clearvars -except SVDStats SIMStats smoothStats rOpts
 close all
 
 opts.targetRL = 10;
-opts.sectMin = 25;
+opts.sectMin = 3;
 opts.maxDiff = 0.01; %set high to 'turn off' constraint.
 
-% river = 'Sacramento';
+river = 'Sacramento';
 % river = 'Po';
-river = 'Tanana';
+% river = 'Tanana';
 
 switch river
     case 'Sacramento'
@@ -82,7 +82,7 @@ dim = size(simAllign.sCoord);
 z2All = nan(dim);
 sAll = nan(dim);
 
-for r = min(section):3%max(section)
+for r = min(section):max(section)
     inSect = section == r;
     
     simReach = trimFields(simAllign,inSect);
@@ -181,20 +181,10 @@ rOpts.(river) = opts;
 % colormap(brewermap(64,'YlGnBu'))
 % set(gca,'color',0*[1 1 1]);
 
-%singular values
-figure()
-bar(diag(S))
-xlabel('Singular Value Number')
-ylabel('Singular Value Magnitude')
-% title('Singular Values of Elevation Residuals')
-title(['Singular Values - ' sprintf(river)]);
-% set(gca,'YScale','log');
-set(gcf,'Position',[1000 987 862 351]);
-
 %original and approx profiles
 handle = figure();
 subplot(2,1,1);
-plot(skm,zAll)
+plot(skm,zAll,'k')
 % plot(skm,truthAllign.(zField))
 hold on
 xlabel('Flow Distance (km)')
@@ -202,7 +192,7 @@ ylabel('Elevation (m)')
 title('Original Simulation')
 
 subplot(2,1,2);
-plot(skm,z2All)
+plot(skm,z2All,'k')
 hold on
 xlabel('Flow Distance (km)')
 ylabel('Elevation (m)')
@@ -296,12 +286,12 @@ SVDStats.(river).nodePctChange = svdStats.nodePctChange;
 
 %% gif
 % 
-% fileName = '/Users/Ted/Documents/MastersCommittee/firstMeeting/figs/method/16-1.gif';
+% fileName = '/Users/Ted/Documents/InverseTheory/termProj/lra_truth.gif';
 % delete(fileName)
 % figure()
 % set(gcf,'Units','Normalized','Position',[0.319 0.495 0.352 0.25])
-% plot(nanmean(s,2)/1000,SVRecomp(U,S,V,1:16)+mz)
-% text('Units','normalized','position',[0.6 0.8],'String','rank: 16', 'FontSize',24)
+% plot(nanmean(s,2)/1000,SVRecomp(U,S,V,1)+mz)
+% text('Units','normalized','position',[0.6 0.8],'String','rank: 1', 'FontSize',24)
 % xlim = [16 26]; ylim = [28 35];
 % set(gca,'XLim',xlim, 'YLim',ylim)
 % box off
@@ -310,7 +300,7 @@ SVDStats.(river).nodePctChange = svdStats.nodePctChange;
 % gif(fileName,'DelayTime',0.75,'frame',gcf)
 % 
 % 
-% for i = flip(1:15)
+% for i = 2:16
 % plot(nanmean(s,2)/1000,SVRecomp(U,S,V,1:i)+mz)
 % box off
 % text('Units','normalized','position',[0.6 0.8],'String',['rank: ' num2str(i)], 'FontSize',24)

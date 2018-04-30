@@ -17,7 +17,7 @@ function [U,S,V,iSV,iSig] = parallelAnalysis(z,n,grp,p,plotOpt)
 % 4/12/18 Ted Langhorst
 %%
 if ~exist('n','var')
-    error('Must enter number of iterations as second')
+    error('Must enter number of iterations as second argument')
 end
 
 testGroup = 1;
@@ -79,9 +79,9 @@ iSV = find(maskPA); %passes PA but not significant by group
 sVals = diag(S);
 
 figure
-bar(sVals)
+bar(sVals,'FaceColor',[0.8 0.8 0.8])
 hold on
-bar(sVals(find(maskPA)),'k')
+% bar(sVals(find(maskPA)),'k')
 plot(SPAt,'r--','Linewidth',2)
 hold off
 

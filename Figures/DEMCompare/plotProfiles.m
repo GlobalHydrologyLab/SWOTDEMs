@@ -12,8 +12,8 @@ load('Po/DEMProfiles/dems.mat')
 riv = 'Po';
 
 avgCenter = [nanmean(SVDStats.(riv).x,2),nanmean(SVDStats.(riv).y,2)];
-% Po.meanProf = SVDStats.(riv).meanProf;
-Po.meanProf = slopeConstrain(SIMStats.(riv).z, 0.01);
+Po.meanProf = SVDStats.(riv).meanProf;
+% Po.meanProf = slopeConstrain(SIMStats.(riv).z, 0.01);
 Po.avgTruth = nanmean(SIMStats.Po.z - SIMStats.Po.zErr,2);
 Po.SWOT = SVDStats.(riv).meanProf;
 meanZ = nanmean(Po.meanProf); %for bias removal
@@ -37,8 +37,8 @@ Po.errTable = errorTable(Po,Po.DEMNames,Po.avgTruth,Po.skm);
 load('Sacramento/DEMProfiles/dems.mat')
 riv = 'Sacramento';
 avgCenter = [nanmean(SVDStats.(riv).x,2),nanmean(SVDStats.(riv).y,2)];
-% Sac.meanProf = SVDStats.(riv).meanProf;
-Sac.meanProf = slopeConstrain(SIMStats.(riv).z, 0.01);
+Sac.meanProf = SVDStats.(riv).meanProf;
+% Sac.meanProf = slopeConstrain(SIMStats.(riv).z, 0.01);
 Sac.avgTruth = nanmean(SIMStats.(riv).z - SIMStats.(riv).zErr,2);
 Sac.SWOT = SVDStats.(riv).meanProf;
 meanZ = nanmean(Sac.meanProf); %for bias removal
@@ -63,8 +63,8 @@ Sac.errTable = errorTable(Sac,Sac.DEMNames,Sac.avgTruth,Sac.skm);
 load('Tanana/DEMProfiles/demProfiles.mat')
 riv = 'Tanana';
 avgCenter = [nanmean(SVDStats.(riv).x,2),nanmean(SVDStats.(riv).y,2)];
-% Tan.meanProf = SVDStats.(riv).meanProf;
-Tan.meanProf = slopeConstrain(SIMStats.(riv).z, 0.005=);
+Tan.meanProf = SVDStats.(riv).meanProf;
+% Tan.meanProf = slopeConstrain(SIMStats.(riv).z, 0.005=);
 Tan.avgTruth = nanmean(SIMStats.(riv).z - SIMStats.(riv).zErr,2);
 Tan.SWOT = SVDStats.(riv).meanProf;
 meanZ = nanmean(Tan.meanProf); %for bias removal

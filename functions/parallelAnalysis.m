@@ -20,9 +20,9 @@ if ~exist('n','var')
     error('Must enter number of iterations as second argument')
 end
 
-testGroup = 1;
+testGroupOpt = 1;
 if ~exist('grp','var')
-    testGroup = 0;
+    testGroupOpt = 0;
     grp = 1;
 elseif ~exist('p','var')
     p = 0.05; 
@@ -50,7 +50,7 @@ maskPA = diag(S) >= SPAt; %factors according to PA
 [groups,~,grpIDs] = unique(grp);
 iSig = zeros(size(V,2),1);
 
-if testGroup && numel(groups)>1
+if testGroupOpt && numel(groups)>1 
     for i = 2:size(V,2)
         for j = 1:max(grpIDs) %test all pairs
             grp1 = grpIDs == j;
@@ -81,7 +81,7 @@ sVals = diag(S);
 figure
 bar(sVals,'FaceColor',[0.8 0.8 0.8])
 hold on
-% bar(sVals(find(maskPA)),'k')
+bar(sVals(find(maskPA)),'k')
 plot(SPAt,'r--','Linewidth',2)
 hold off
 

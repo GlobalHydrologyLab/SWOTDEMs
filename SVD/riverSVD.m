@@ -19,11 +19,11 @@ close all
 
 opts.targetRL = 10;
 opts.sectMin = 3;
-opts.maxDiff = 0.01; %set high to 'turn off' constraint.
+opts.maxDiff = 0; %set high to 'turn off' constraint.
 
-river = 'Sacramento';
+% river = 'Sacramento';
 % river = 'Po';
-% river = 'Tanana';
+river = 'Tanana';
 
 switch river
     case 'Sacramento'

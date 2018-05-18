@@ -34,7 +34,8 @@ if ~exist('plotOpt','var')
 end
 
 %% Parallel Analysis
-sigma = std(z,1,2);
+% sigma = std(z,1,2);
+sigma = movstd(z,21,1);
 
 for i = 1:n
     zRand = randn(size(z)) .* sigma;
@@ -51,7 +52,7 @@ maskPA = diag(S) >= SPAt; %factors according to PA
 iSig = zeros(size(V,2),1);
 
 if testGroupOpt && numel(groups)>1 
-    for i = 2:size(V,2)
+    for i = 2:size(U,2)
         for j = 1:max(grpIDs) %test all pairs
             grp1 = grpIDs == j;
             grp2 = ~grp1;
@@ -81,8 +82,9 @@ sVals = diag(S);
 figure
 bar(sVals,'FaceColor',[0.8 0.8 0.8])
 hold on
-bar(sVals(find(maskPA)),'k')
+bar(sVals.*maskPA,'k')
 plot(SPAt,'r--','Linewidth',2)
+set(gca,'YScale','log')
 hold off
 
 

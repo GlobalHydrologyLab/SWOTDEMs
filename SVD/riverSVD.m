@@ -81,6 +81,7 @@ zAll = zAll - nanmean(zAll - truthAllign.(zField),1);
 dim = size(simAllign.sCoord);
 z2All = nan(dim);
 sAll = nan(dim);
+opts.avgSV = 0;
 
 for r = min(section):max(section)
     inSect = section == r;
@@ -114,8 +115,11 @@ for r = min(section):max(section)
     % join section data for later comparison  
     z2All(inSect,~delCol) = z2;
     sAll(inSect,~delCol) = s;
+    
+    opts.avgSV = opts.avgSV + size(z,1).*numel(opts.iSV{r});
 end
-
+missingRows = sum(isnan(z2All),2) == size(z2All,2);
+opts.avgSV = opts.avgSV ./ (length(z2All) - sum(missingRows));
  
 %constrain profiles
 for i = 1:size(z2All,2)
@@ -187,16 +191,18 @@ subplot(2,1,1);
 plot(skm,zAll,'k')
 % plot(skm,truthAllign.(zField))
 hold on
-xlabel('Flow Distance (km)')
+% xlabel('Flow Distance (km)')
 ylabel('Elevation (m)')
 title('Original Simulation')
+set(gca, 'FontName', 'Times New Roman')
 
 subplot(2,1,2);
 plot(skm,z2All,'k')
 hold on
 xlabel('Flow Distance (km)')
 ylabel('Elevation (m)')
-title('Low-Rank Approximation')
+title('Constrained Low-Rank Approximation')
+set(gca, 'FontName', 'Times New Roman')
 
 % for r = reaches
 %     ir = find(reachVec == r,1,'last');
@@ -211,6 +217,10 @@ title('Low-Rank Approximation')
 allAxes = findobj(handle, 'type', 'axes');
 linkaxes(allAxes);
 set(gcf,'Units','normalized','Position',[0.013672 0.013194 0.59922 0.91528])
+% set(gcf,'Units','normalized','Position',[0.30195 0.42569 0.21562 0.21597])
+% set(gca,'XLim',[16 26])
+% set(gca,'YLim',[28 35])
+
 
 figure()
 subplot(2,2,1)

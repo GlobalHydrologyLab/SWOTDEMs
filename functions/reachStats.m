@@ -61,8 +61,10 @@ end
 
 testStats.slopeMAE = nanmean(abs(testStats.slopeErr),1);
 testStats.slopeRMSE = sqrt(nanmean(testStats.slopeErr.^2,1));
-testStats.nodeMAE = nanmean(abs(testZ - truthZ),1);
-testStats.nodeRMSE = sqrt(nanmean((testZ - truthZ).^2,1));
+testStats.dailyMAE = nanmean(abs(testZ - truthZ),1);
+testStats.dailyRMSE = sqrt(nanmean((testZ - truthZ).^2,1));
+testStats.totMAE = nanmean(abs(testZ(:) - truthZ(:)));
+testStats.totRMSE = sqrt(nanmean((testZ(:) - truthZ(:)).^2));
 testStats.s = skm;
 testStats.z = testZ;
 testStats.zErr = testZ - truthZ;

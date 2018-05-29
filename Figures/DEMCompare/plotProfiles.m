@@ -4,7 +4,7 @@
 clear
 close all
 
-load('smoothingTest/k13_sectMin3.mat')
+load('smoothingTest/PA_mD0.mat')
 maxDiff = 0;
 
 %% Po
@@ -59,6 +59,16 @@ Sac.DEMNames = fields(Sac);
 Sac.DEMNames = Sac.DEMNames([3,5:end]);
 Sac.errTable = errorTable(Sac,Sac.DEMNames,Sac.avgTruth,Sac.skm);
 
+
+% %prepare truth data
+load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Sacramento/Longitudinalpro/boatXYZ.mat')
+gps(:,4:5) = xy2sn(clOut,[gps(:,1),gps(:,2)],transParam);
+gps = nanRows(gps);
+[~,gpsUnique] = unique(gps(:,4));
+gps = gps(gpsUnique,:);
+gps(:,4) = gps(:,4)./1000; %km 
+Sac.errTable = errorTable(Sac,Sac.DEMNames,gps(:,3),gps(:,4));
+
 %% Tanana
 load('Tanana/DEMProfiles/demProfiles.mat')
 riv = 'Tanana';
@@ -93,22 +103,23 @@ Tan.errTable = errorTable(Tan,Tan.DEMNames,gps(:,3),gps(:,4));
 
 %% save data
 
-% save('Figures/DEMCompare/interpConstrainDEMs.mat', 'Po','Sac','Tan')
+save('Figures/DEMCompare/interpConstrainDEMs.mat', 'Po','Sac','Tan')
 
 %% Plots
 % clear
 close all
-% load('Figures/DEMCompare/interpConstrainDEMs.mat')
+load('Figures/DEMCompare/interpConstrainDEMs.mat')
 LW = 1;
 xBuff = 0.025;
 yBuff = 0.1;
 
 colors = brewermap(8,'dark2');
 
-figure(1)
+    ax = tight_subplot(3,1,[.05 .05],[.05 .05],[.05 .05]);
 set(gcf,'Units','normalized','Position',[0.32461 0.11319 0.31445 0.70556])
 
-subplot(3,1,1)
+% subplot(3,1,1)
+axes(ax(1))
 hold on
 plot(Po.skm,Po.SRTM,'Color',colors(4,:),'Linewidth',LW)
 plot(Po.skm,Po.MERIT,'Color',colors(6,:),'Linewidth',LW)
@@ -116,14 +127,17 @@ plot(Po.skm,Po.ASTER,'Color',colors(3,:),'Linewidth',LW)
 plot(Po.skm,Po.TINITALY,'Color',colors(5,:),'Linewidth',LW)
 plot(Po.skm,Po.meanProf,'k','Linewidth',2)
 centerData(Po.skm,Po.meanProf,xBuff,yBuff);
-xlabel('Flow Distance (km)')
-ylabel('Elevation (m)')
-legend('SRTM','MERIT','ASTER','TINITALY','SWOT')
-title('Po')
+% xlabel('Flow Distance (km)', 'FontSize',14)
+ylabel('Elevation (m)', 'FontSize',14)
+legend({'SRTM','MERIT','ASTER','TINITALY','SWOT'},'FontSize',14)
+title('Po', 'FontSize',16)
+set(gca, 'FontName', 'Times New Roman')
+set(gca,'XTickLabelMode','auto','YTickLabelMode','auto')
 box on
 
 
-subplot(3,1,2)
+% subplot(3,1,2)
+axes(ax(2))
 hold on
 plot(Sac.skm,Sac.SRTM,'Color',colors(4,:),'Linewidth',LW)
 plot(Sac.skm,Sac.MERIT,'Color',colors(6,:),'Linewidth',LW)
@@ -132,14 +146,17 @@ plot(Sac.skm,Sac.NED,'Color',colors(1,:),'Linewidth',LW)
 plot(Sac.skm,Sac.lidar,'Color',colors(8,:),'Linewidth',LW)
 plot(Sac.skm,Sac.meanProf,'k','Linewidth',2)
 centerData(Sac.skm,Sac.meanProf,xBuff,yBuff);
-xlabel('Flow Distance (km)')
-ylabel('Elevation (m)')
-legend('SRTM','MERIT','ASTER','NED','LiDAR','SWOT')
-title('Sacramento')
+% xlabel('Flow Distance (km)', 'FontSize',14)
+ylabel('Elevation (m)', 'FontSize',14)
+legend({'SRTM','MERIT','ASTER','NED','LiDAR','SWOT'},'FontSize',14)
+title('Sacramento', 'FontSize',16)
+set(gca, 'FontName', 'Times New Roman')
+set(gca,'XTickLabelMode','auto','YTickLabelMode','auto')
 box on
 
 
-subplot(3,1,3)
+% subplot(3,1,3)
+axes(ax(3))
 hold on
 plot(Tan.skm,Tan.MERIT,'Color',colors(6,:),'Linewidth',LW)
 plot(Tan.skm,Tan.ASTER,'Color',colors(3,:),'Linewidth',LW)
@@ -147,10 +164,12 @@ plot(Tan.skm,Tan.ArcticDEM,'Color',colors(2,:),'Linewidth',LW)
 plot(Tan.skm,Tan.TanDEMX,'Color',colors(7,:),'Linewidth',LW)
 plot(Tan.skm,Tan.meanProf,'k','Linewidth',2)
 centerData(Tan.skm,Tan.meanProf,xBuff,yBuff);
-xlabel('Flow Distance (km)')
-ylabel('Elevation (m)')
-legend('MERIT','ASTER','ArcticDEM','TanDEM-X','SWOT')
-title('Tanana')
+xlabel('Flow Distance (km)', 'FontSize',14)
+ylabel('Elevation (m)', 'FontSize',14)
+legend({'MERIT','ASTER','ArcticDEM','TanDEM-X','SWOT'},'FontSize',14)
+title('Tanana', 'FontSize',16)
+set(gca, 'FontName', 'Times New Roman')
+set(gca,'XTickLabelMode','auto','YTickLabelMode','auto')
 box on
 
 %%

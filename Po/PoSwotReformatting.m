@@ -12,6 +12,11 @@ fileName = {k.name}';
 isNodeFile = contains(fileName,'node');
 isTruthFile = contains(fileName,'gdem');
 
+utmStruct = defaultm('utm'); 
+utmStruct.zone = '32T';  
+utmStruct.geoid = wgs84Ellipsoid;
+utmStruct = defaultm(utmStruct);
+
 % import shapfiles
 sIdx=1;
 tIdx=1;
@@ -22,30 +27,20 @@ for i = 1 : length(fileName)
         
         shapefile = shaperead( [k(i).folder '/' fileName{i} '/' fileName{i} '.shp'] );
         
-        %UTM transformation params
-        if ~exist('utmstruct','var')
-            poZone = utmzone(nanmean(shapefile(1).lat), ... 
-            nanmean(shapefile(1).lon));
-            
-            utmstruct = defaultm('utm');
-            utmstruct.zone = poZone;
-            utmstruct.geoid = wgs84Ellipsoid;
-            utmstruct = defaultm(utmstruct);
-        end
-        [east,north] = mfwdtran(utmstruct,[shapefile.Y]',[shapefile.X]');
         
         if ~isTruthFile(i) 
             simulated(sIdx).name = char(fileName(i));
             simulated(sIdx).reach = [shapefile.reach_indx]';
             simulated(sIdx).node = [shapefile.node_indx]';
-            simulated(sIdx).easting = east;
-            simulated(sIdx).northing = north;
+            simulated(sIdx).lat = [shapefile.Y]';
+            simulated(sIdx).lon = [shapefile.X]';
+            [simulated(sIdx).easting, simulated(sIdx).northing] = ...
+                mfwdtran(utmStruct,simulated(sIdx).lat,simulated(sIdx).lon);
             simulated(sIdx).nHeight = [shapefile.h_n_ave]';
             simulated(sIdx).nHeightStd = [shapefile.h_n_std]';
             simulated(sIdx).nWidth = [shapefile.w_ptp]';
             simulated(sIdx).nObs = [shapefile.nobs]';
-            simulated(sIdx).lat = [shapefile.Y]';
-            simulated(sIdx).lon = [shapefile.X]';
+
             
             sIdx = sIdx + 1;
 
@@ -64,21 +59,21 @@ for i = 1 : length(fileName)
                 truth(tIdx).node = [shapefile.node_indx]';
             end
             
-            truth(tIdx).easting = east;
-            truth(tIdx).northing = north;
+            truth(tIdx).lat = [shapefile.Y]';
+            truth(tIdx).lon = [shapefile.X]';
+            [truth(tIdx).easting, truth(tIdx).northing] = ...
+                mfwdtran(utmStruct,truth(tIdx).lat,truth(tIdx).lon);
             truth(tIdx).nHeight = [shapefile.h_n_ave]';
             truth(tIdx).nHeightStd = [shapefile.h_n_std]';
             truth(tIdx).nWidth = [shapefile.w_ptp]';
 
-            if ischar([shapefile.nobs])
+            if ischar([shapefile.nobs]) %same weird character issues
                 for j = 1:length(shapefile)
                     truth(tIdx).nObs(j,1) = str2double(shapefile(j).nobs);
                 end
             else
                 truth(tIdx).nObs = [shapefile.nobs]';
             end
-            truth(tIdx).lat = [shapefile.Y]';
-            truth(tIdx).lon = [shapefile.X]';
 
             tIdx = tIdx + 1;
         end
@@ -109,8 +104,28 @@ end
 
 truth = truthLR;
 
-% % % % % % clearvars -except simulated truth
-% % % % % % save('Po/PoSim_3Pass.mat')
+%%
+
+simAllign = nodeAllign(simulated);
+avgCenterline = [nanmean([simAllign.easting],2), ... 
+    nanmean([simAllign.northing],2)];
+transParam = [1 3 5 length(avgCenterline) 200]';
+
+for i = 1:length(simulated)
+   [sn,~,clOut] = xy2sn(avgCenterline, ... 
+       [simulated(i).easting,simulated(i).northing], transParam);
+   simulated(i).sCoord = sn(:,1);
+   simulated(i).nCoord = sn(:,2);
+   
+   sn = xy2sn(avgCenterline, ... 
+       [truth(i).easting, truth(i).northing], transParam);
+   truth(i).sCoord = sn(:,1);
+   truth(i).nCoord = sn(:,2);
+end
+
+
+clearvars -except simulated truth
+save('Po/PoSimData.mat')
 
 
 

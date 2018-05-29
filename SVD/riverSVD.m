@@ -22,31 +22,31 @@ opts.sectMin = 3;
 opts.maxDiff = 0; %set high to 'turn off' constraint.
 
 % river = 'Sacramento';
-% river = 'Po';
-river = 'Tanana';
+river = 'Po';
+% river = 'Tanana';
 
 switch river
     case 'Sacramento'
-        load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Sacramento/SacDataV4.mat')
+        load('./Sacramento/SacSimData.mat')
         zField = 'geoHeight';
         % % hard-coded removal of far range data from pass 527
         for i = 10:17
-            simulated(i).geoHeight(339:487) = NaN;
+            simulated(i).(zField)(339:487) = NaN;
         end
         simulated(6) = [];
         truth(6) = [];
         groups = [ones(1,8) ones(1,8)+1]';
         
     case 'Po'
-        load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Po/transformedPo_3Pass.mat')
+        load('./Po/PoSimData.mat')
         zField = 'nHeight';
         simulated(1:17) = trimFields(simulated(1:17),205:400);
         truth(1:17) = trimFields(truth(1:17),205:400);
         groups = [ones(1,17) ones(1,34)+1 ones(1,18)+2]';
 
     case 'Tanana'
-        load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Tanana/transformedTananaData.mat')
-        zField = 'nHeight';
+        load('./Tanana/TananaSimData.mat')
+        zField = 'geoHeight';
         simulated(9:12) = trimFields(simulated(9:12),250:675);
         truth(9:12) = trimFields(truth(9:12),250:675);
         simulated = trimFields(simulated,25:600);
@@ -59,9 +59,7 @@ end
 
 %Group data into matrices without gaps, intelligently deleting data so that
 %all sections have >= opts.sectMin rows
-nProf = length(simulated);
 simAllign = nodeAllign(simulated);
-% zAll = simAllign.(zField);
 
 %trim truth to sim extent
 nodeRng = [min(simAllign.node(1,:)), max(simAllign.node(end,:))];
@@ -75,7 +73,6 @@ truthAllign = nodeAllign(truth);
 observedBy = ~isnan(zAll);
 truthAllign.(zField)(~observedBy) = NaN; %mask
 zAll = zAll - nanmean(zAll - truthAllign.(zField),1);
-
 
 %init. matrices for storing section data
 dim = size(simAllign.sCoord);
@@ -106,7 +103,7 @@ for r = min(section):max(section)
     zresid = z - mz;
 
     grp = groups(~delCol);
-    [U,S,V,opts.iSV{r},opts.iSV_orbitVec{r}] = parallelAnalysis(zresid,100,grp,0.05);
+    [U,S,V,opts.iSV{r},opts.iSV_orbitVec{r},St] = parallelAnalysis(zresid,100,grp,0.05);
 
     z2 = SVRecomp(U,S,V,opts.iSV{r});
     
@@ -242,24 +239,27 @@ set(gca,'visible','off')
 SVDStats.(river).slopePctChange = svdStats.slopePctChange;
 
 subplot(2,2,3)
-scatter(simStats.nodeMAE.*100, svdStats.nodeMAE.*100,'filled')
+scatter(simStats.dailyMAE.*100, svdStats.dailyMAE.*100,'filled')
 scatter1to1(gca,'origin');
 xlabel('Simulated MAE(cm)')
 ylabel('LRA MAE(cm)')
 title('MAE')
 % 
-svdStats.nodePctChange = (nanmean(svdStats.nodeMAE)-nanmean(simStats.nodeMAE))./nanmean(simStats.nodeMAE) * 100;
+
+
+svdStats.nodePctChange = ((svdStats.totMAE - simStats.totMAE) ./ simStats.totMAE) * 100;
 subplot(2,2,4)
 text('Units','normalized','position',[0.05 0.8],'String', ... 
-    ['Sim: ' num2str(nanmean(simStats.nodeMAE).*100) ' cm'], 'FontSize',24)
+    ['Sim: ' num2str(simStats.totMAE.*100) ' cm'], 'FontSize',24)
 text('Units','normalized','position',[0.05 0.6],'String', ... 
-    ['LRA: ' num2str(nanmean(svdStats.nodeMAE).*100) ' cm'], 'FontSize',24)
+    ['LRA: ' num2str(svdStats.totMAE.*100) ' cm'], 'FontSize',24)
 text('Units','normalized','position',[0.05 0.4],'String', ... 
     ['% change: ' num2str(svdStats.nodePctChange)], 'FontSize',24)
 set(gca,'visible','off')
 SVDStats.(river).nodePctChange = svdStats.nodePctChange;
 
-
+SIMStats.(river).totRMSE
+SVDStats.(river).totRMSE
 % subplot(2,2,4)
 % scatter(simStats.slopeRRMSE, svdStats.slopeRRMSE,[],nCol,'filled')
 % scatter1to1(gca,'origin');

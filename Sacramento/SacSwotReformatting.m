@@ -29,7 +29,7 @@ for i = 1 : length(fileName)
     end
     
     %save node simulator files in struct 'truth'
-    if isNodeFile(i) && ~isTruthFile(i) 
+    if ~isTruthFile(i) 
         
         simulated(sIndex).name = char(fileName(i));
         simulated(sIndex).reach = [shapefile.Reach_ID]';
@@ -55,7 +55,7 @@ for i = 1 : length(fileName)
     
     
     %save node truth files in struct 'truth'
-    if isNodeFile(i) && isTruthFile(i) 
+    if isTruthFile(i) 
         
         truth(tIndex).name = char(fileName(i));
         truth(tIndex).reach = [shapefile.Reach_ID]';

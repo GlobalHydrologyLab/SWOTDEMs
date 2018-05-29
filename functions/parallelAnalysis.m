@@ -1,4 +1,4 @@
-function [U,S,V,iSV,iSig] = parallelAnalysis(z,n,grp,p,plotOpt)
+function [U,S,V,iSV,iSig,St] = parallelAnalysis(z,n,grp,p,plotOpt)
 %% svdPA.m 
 % Performs SVD on 'z' followed by factor analysis using Parallel Analysis
 % with 'n' iterations.
@@ -34,18 +34,20 @@ if ~exist('plotOpt','var')
 end
 
 %% Parallel Analysis
-% sigma = std(z,1,2);
-sigma = movstd(z,21,1);
+sigma = std(z,1,2);
 
 for i = 1:n
     zRand = randn(size(z)) .* sigma;
-    [~,St(:,:,i),~] = svd(zRand);
+    [~,Stemp,~] = svd(zRand);
+    St(i,:) = diag(Stemp)';
+
 end
 
-SPAt = diag(mean(St,3));
+SPAt = mean(St,1)';
 [U,S,V] = svd(z,0);
 
 maskPA = diag(S) >= SPAt; %factors according to PA
+maskPA(1) = 1;
 
 %% Group Test
 [groups,~,grpIDs] = unique(grp);
@@ -84,7 +86,7 @@ bar(sVals,'FaceColor',[0.8 0.8 0.8])
 hold on
 bar(sVals.*maskPA,'k')
 plot(SPAt,'r--','Linewidth',2)
-set(gca,'YScale','log')
+% set(gca,'YScale','log')
 hold off
 
 

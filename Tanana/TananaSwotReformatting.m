@@ -4,8 +4,6 @@
 
 clear
 
-zField = 'nHeight';
-
 %find shapefiles in the directory
 k = dir('/Users/Ted/Documents/Tanana/SWOTSimulator/TananaRiverObs');
 fileName = {k.name}';
@@ -28,8 +26,8 @@ for i = 1 : length(fileName)
         simulated(sIndex).node = 870 - flip(csv.data(hasElev,20)); %reverse the numerical order as well
         simulated(sIndex).easting = flip(csv.data(hasElev,22));
         simulated(sIndex).northing = flip(csv.data(hasElev,23));
-        simulated(sIndex).nHeight = flip(csv.data(hasElev,13));
-        simulated(sIndex).nHeightStd = flip(csv.data(hasElev,14));
+        simulated(sIndex).geoHeight = flip(csv.data(hasElev,13));
+        simulated(sIndex).geoHeightStd = flip(csv.data(hasElev,14));
         simulated(sIndex).nWidth = flip(csv.data(hasElev,8));
         simulated(sIndex).nWidthStd = flip(csv.data(hasElev,9));
         simulated(sIndex).nObs = flip(csv.data(hasElev,6));
@@ -42,45 +40,12 @@ for i = 1 : length(fileName)
     
 end
 
-%half-finished attempt to merge 100m nodes together.
-
-% simAllign = nodeAllign(simulated);
-% 
-% fieldNames = fields(simAllign);
-% numFields = numel(fieldNames);
-% nProfs = length(simulated);
-% 
-% for i = 1:nProfs
-%     
-%     
-%     nNodes = length(simulated(i).(zField));
-%     colIDs = [1:2:nNodes-1; 2:2:nNodes]';
-%     
-%     %nObs weights
-%     nObs = simulated(i).nObs(colIDs);
-%     nObsRowTotal = nansum(nObs,2);
-%     nObsWeight = nObs./nObsRowTotal;
-%     for j = 1:numFields
-% 
-%         %check it's not a field like 'name' with 1 value
-%         if size(simulated(i).(fieldNames{j}),1) ~= 1
-%             if strcmp(fieldNames{j},'nObs')
-%                 simulated(i).nObs = sum(simulated(i).nObs(colIDs),2);
-%             elseif strcmp(fieldNames{j},'node')
-%                 simulated(i).node = floor(mean(simulated(i).node(colIDs),2));
-%             else
-%                 simulated(i).(fieldNames{j}) =  ...
-%                     nansum(simulated(i).(fieldNames{j})(colIDs).*nObsWeight,2);
-%             end
-%         end
-%     end
-% end
 
 %% truth data
 % sampled input DEMs at the centerline locations
 
 %reorder truth data so that we can directly compare with the simulator data
-%by indeces.
+%by indeces. 
 
 simDataOrder = ['elevs_2 ';
     'elevs_23';
@@ -93,7 +58,7 @@ simDataOrder = ['elevs_2 ';
     'elevs_6 ';
     'elevs_27';
     'elevs_48';
-    'elevs_69'];
+    'elevs_69']; %from Elizabeth
 
 k = dir('/Users/Ted/Documents/Tanana/SWOTSimulator/TananaRiverObs/*.tif');
 
@@ -121,16 +86,34 @@ for i = 1:length(k)
     t(i).node = simulated(simID(i)).node;
     t(i).easting = cx;
     t(i).northing = cy;
-    t(i).nHeight = prof;
+    t(i).geoHeight = prof;
     
 end
 
 truth = t;
 
+%%
+simAllign = nodeAllign(simulated);
+avgCenterline = [nanmean([simAllign.easting],2), ... 
+    nanmean([simAllign.northing],2)];
+transParam = [1 3 5 length(avgCenterline) 150]';
+
+for i = 1:length(simulated)
+   [sn,~,clOut] = xy2sn(avgCenterline, ... 
+       [simulated(i).easting,simulated(i).northing], transParam);
+   simulated(i).sCoord = sn(:,1);
+   simulated(i).nCoord = sn(:,2);
+   
+   sn = xy2sn(avgCenterline, ... 
+       [truth(i).easting, truth(i).northing], transParam);
+   truth(i).sCoord = sn(:,1);
+   truth(i).nCoord = sn(:,2);
+end
+
 %% 
 
-% % % % % % % clearvars -except simulated truth zField
-% % % % % % % save('Tanana/TananaSimTruth.mat')
+clearvars -except simulated truth
+save('./Tanana/TananaSimData.mat')
 
 
 

@@ -4,7 +4,9 @@
 clear
 close all
 
-load('smoothingTest/PA_mD0.mat')
+% load('smoothingTest/PA_mD0.mat')
+load('./smoothingTest/PA_SacFix2.mat')
+load('./smoothingTest/PA_geoidFix.mat')
 maxDiff = 0;
 
 %% Po
@@ -13,10 +15,9 @@ riv = 'Po';
 
 avgCenter = [nanmean(SVDStats.(riv).x,2),nanmean(SVDStats.(riv).y,2)];
 Po.meanProf = SVDStats.(riv).meanProf;
-% Po.meanProf = slopeConstrain(SIMStats.(riv).z, 0.01);
 Po.avgTruth = nanmean(SIMStats.Po.z - SIMStats.Po.zErr,2);
 Po.SWOT = SVDStats.(riv).meanProf;
-meanZ = nanmean(Po.meanProf); %for bias removal
+meanZ = nanmean(Po.avgTruth); %for bias removal
 transParam = [1 3 5 length(avgCenter)*10 750]';
    
 [snCoords,~,clOut] = xy2sn(avgCenter,avgCenter,transParam);
@@ -38,10 +39,9 @@ load('Sacramento/DEMProfiles/dems.mat')
 riv = 'Sacramento';
 avgCenter = [nanmean(SVDStats.(riv).x,2),nanmean(SVDStats.(riv).y,2)];
 Sac.meanProf = SVDStats.(riv).meanProf;
-% Sac.meanProf = slopeConstrain(SIMStats.(riv).z, 0.01);
 Sac.avgTruth = nanmean(SIMStats.(riv).z - SIMStats.(riv).zErr,2);
 Sac.SWOT = SVDStats.(riv).meanProf;
-meanZ = nanmean(Sac.meanProf); %for bias removal
+meanZ = nanmean(Sac.avgTruth); %for bias removal
 transParam = [1 3 5 length(avgCenter)*10 200]';
 
 [snCoords,~,clOut] = xy2sn(avgCenter,avgCenter,transParam);
@@ -57,27 +57,26 @@ Sac.lidar = profResample(lidar,clOut,Sac.skm,transParam,meanZ,maxDiff);
 
 Sac.DEMNames = fields(Sac);
 Sac.DEMNames = Sac.DEMNames([3,5:end]);
-Sac.errTable = errorTable(Sac,Sac.DEMNames,Sac.avgTruth,Sac.skm);
+% Sac.errTable = errorTable(Sac,Sac.DEMNames,Sac.avgTruth,Sac.skm);
 
-
-% %prepare truth data
-load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Sacramento/Longitudinalpro/boatXYZ.mat')
-gps(:,4:5) = xy2sn(clOut,[gps(:,1),gps(:,2)],transParam);
-gps = nanRows(gps);
-[~,gpsUnique] = unique(gps(:,4));
-gps = gps(gpsUnique,:);
-gps(:,4) = gps(:,4)./1000; %km 
-Sac.errTable = errorTable(Sac,Sac.DEMNames,gps(:,3),gps(:,4));
+%prepare truth data
+load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Sacramento/Longitudinalpro/boatXYZ_geoid.mat')
+Sac.gps = gps;
+Sac.gps(:,4:5) = xy2sn(clOut,[gps(:,1),gps(:,2)],transParam);
+Sac.gps = nanRows(Sac.gps);
+[~,gpsUnique] = unique(Sac.gps(:,4));
+Sac.gps = Sac.gps(gpsUnique,:);
+Sac.gps(:,4) = Sac.gps(:,4)./1000; %km 
+Sac.errTable = errorTable(Sac,Sac.DEMNames,Sac.gps(:,3),Sac.gps(:,4));
 
 %% Tanana
 load('Tanana/DEMProfiles/demProfiles.mat')
 riv = 'Tanana';
 avgCenter = [nanmean(SVDStats.(riv).x,2),nanmean(SVDStats.(riv).y,2)];
 Tan.meanProf = SVDStats.(riv).meanProf;
-% Tan.meanProf = slopeConstrain(SIMStats.(riv).z, 0.005=);
 Tan.avgTruth = nanmean(SIMStats.(riv).z - SIMStats.(riv).zErr,2);
 Tan.SWOT = SVDStats.(riv).meanProf;
-meanZ = nanmean(Tan.meanProf); %for bias removal
+meanZ = nanmean(Tan.avgTruth); %for bias removal
 transParam = [1 3 5 length(avgCenter)*10 200]';
 
 [snCoords,~,clOut] = xy2sn(avgCenter,avgCenter,transParam);
@@ -91,34 +90,35 @@ Tan.TanDEMX = profResample(TanDEMX,clOut,Tan.skm,transParam,meanZ,maxDiff);
 
 Tan.DEMNames = fields(Tan);
 Tan.DEMNames = Tan.DEMNames([3,5:end]);
+Tan.errTable = errorTable(Tan,Tan.DEMNames,Tan.avgTruth,Tan.skm);
 
 %prepare truth data
-load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Tanana/gpsProfiles/gpsProf.mat')
-gps(:,4:5) = xy2sn(clOut,[gps(:,1),gps(:,2)],transParam);
-gps = nanRows(gps);
-[~,gpsUnique] = unique(gps(:,4));
-gps = gps(gpsUnique,:);
-gps(:,4) = gps(:,4)./1000; %km 
-Tan.errTable = errorTable(Tan,Tan.DEMNames,gps(:,3),gps(:,4));
+% load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Tanana/gpsProfiles/gpsProf.mat')
+% gps(:,4:5) = xy2sn(clOut,[gps(:,1),gps(:,2)],transParam);
+% gps = nanRows(gps);
+% [~,gpsUnique] = unique(gps(:,4));
+% gps = gps(gpsUnique,:);
+% gps(:,4) = gps(:,4)./1000; %km 
+% Tan.errTable = errorTable(Tan,Tan.DEMNames,gps(:,3),gps(:,4));
 
 %% save data
 
 save('Figures/DEMCompare/interpConstrainDEMs.mat', 'Po','Sac','Tan')
 
 %% Plots
-% clear
+clear
 close all
 load('Figures/DEMCompare/interpConstrainDEMs.mat')
 LW = 1;
 xBuff = 0.025;
 yBuff = 0.1;
+set(0,'defaultAxesFontSize',12,'DefaultAxesFontName','Times New Roman')
 
 colors = brewermap(8,'dark2');
 
-    ax = tight_subplot(3,1,[.05 .05],[.05 .05],[.05 .05]);
-set(gcf,'Units','normalized','Position',[0.32461 0.11319 0.31445 0.70556])
+ax = tight_subplot(3,1,[.075 .05],[.1 .05],[.1 .1]);
+set(gcf,'Units','centimeters','Position',[29.316 10.125 18 19.614])
 
-% subplot(3,1,1)
 axes(ax(1))
 hold on
 plot(Po.skm,Po.SRTM,'Color',colors(4,:),'Linewidth',LW)
@@ -126,17 +126,13 @@ plot(Po.skm,Po.MERIT,'Color',colors(6,:),'Linewidth',LW)
 plot(Po.skm,Po.ASTER,'Color',colors(3,:),'Linewidth',LW)
 plot(Po.skm,Po.TINITALY,'Color',colors(5,:),'Linewidth',LW)
 plot(Po.skm,Po.meanProf,'k','Linewidth',2)
-centerData(Po.skm,Po.meanProf,xBuff,yBuff);
-% xlabel('Flow Distance (km)', 'FontSize',14)
-ylabel('Elevation (m)', 'FontSize',14)
-legend({'SRTM','MERIT','ASTER','TINITALY','SWOT'},'FontSize',14)
-title('Po', 'FontSize',16)
-set(gca, 'FontName', 'Times New Roman')
+% centerData(Po.skm,Po.meanProf,xBuff,yBuff);
+ylabel('Elevation (m)')
+legend({'SRTM','MERIT','ASTER','TINITALY','SWOT'},'FontSize',12)
+title('Po')
 set(gca,'XTickLabelMode','auto','YTickLabelMode','auto')
 box on
 
-
-% subplot(3,1,2)
 axes(ax(2))
 hold on
 plot(Sac.skm,Sac.SRTM,'Color',colors(4,:),'Linewidth',LW)
@@ -145,17 +141,13 @@ plot(Sac.skm,Sac.ASTER,'Color',colors(3,:),'Linewidth',LW)
 plot(Sac.skm,Sac.NED,'Color',colors(1,:),'Linewidth',LW)
 plot(Sac.skm,Sac.lidar,'Color',colors(8,:),'Linewidth',LW)
 plot(Sac.skm,Sac.meanProf,'k','Linewidth',2)
-centerData(Sac.skm,Sac.meanProf,xBuff,yBuff);
-% xlabel('Flow Distance (km)', 'FontSize',14)
-ylabel('Elevation (m)', 'FontSize',14)
-legend({'SRTM','MERIT','ASTER','NED','LiDAR','SWOT'},'FontSize',14)
-title('Sacramento', 'FontSize',16)
-set(gca, 'FontName', 'Times New Roman')
+% centerData(Sac.skm,Sac.meanProf,xBuff,yBuff);
+ylabel('Elevation (m)')
+legend({'SRTM','MERIT','ASTER','NED','LiDAR','SWOT'},'FontSize',12)
+title('Sacramento')
 set(gca,'XTickLabelMode','auto','YTickLabelMode','auto')
 box on
 
-
-% subplot(3,1,3)
 axes(ax(3))
 hold on
 plot(Tan.skm,Tan.MERIT,'Color',colors(6,:),'Linewidth',LW)
@@ -163,14 +155,15 @@ plot(Tan.skm,Tan.ASTER,'Color',colors(3,:),'Linewidth',LW)
 plot(Tan.skm,Tan.ArcticDEM,'Color',colors(2,:),'Linewidth',LW)
 plot(Tan.skm,Tan.TanDEMX,'Color',colors(7,:),'Linewidth',LW)
 plot(Tan.skm,Tan.meanProf,'k','Linewidth',2)
-centerData(Tan.skm,Tan.meanProf,xBuff,yBuff);
-xlabel('Flow Distance (km)', 'FontSize',14)
-ylabel('Elevation (m)', 'FontSize',14)
-legend({'MERIT','ASTER','ArcticDEM','TanDEM-X','SWOT'},'FontSize',14)
-title('Tanana', 'FontSize',16)
-set(gca, 'FontName', 'Times New Roman')
+% centerData(Tan.skm,Tan.meanProf,xBuff,yBuff);
+xlabel('Flow Distance (km)')
+ylabel('Elevation (m)')
+legend({'MERIT','ASTER','ArcticDEM','TanDEM-X','SWOT'},'FontSize',12)
+title('Tanana')
 set(gca,'XTickLabelMode','auto','YTickLabelMode','auto')
 box on
+
+% pdfExport(gcf,'/Users/Ted/Documents/DEMPaper/figuresDraft/demCompare/demCompare')
 
 %%
 function[prof] = clean_skm(prof)
@@ -200,13 +193,7 @@ end
 [~,uniqueS] = unique(prof(:,4));
 prof_rs = interp1(prof(uniqueS,4)./1000,prof(uniqueS,3),skm);
 prof_rs = slopeConstrain(prof_rs,maxDiff);
-prof_rs = prof_rs - (nanmean(prof_rs) - meanZ); 
-
-% prof = prof(uniqueS,:);
-% prof(:,3) = slopeConstrain(prof(:,3),maxDiff);
-% prof(:,3) = prof(:,3) - (nanmean(prof(:,3)) - meanZ);
-% 
-% prof_rs = prof;
+prof_rs = prof_rs - (nanmean(prof_rs) - meanZ);
 end
 
 function [t] = errorTable(profiles,DEMNames,truth,truthS)

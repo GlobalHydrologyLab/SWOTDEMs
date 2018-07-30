@@ -4,7 +4,7 @@ function [section, zArray] = subsectByObs(zArray, sectMin)
 %
 % Input is array with columns of river profiles, with rows according to
 % river nodes. Unobserved node/profile combinations are identified as NaN.
-% Input is currently exactly 'z' variable in nodeAvg3.
+% Function nodeAllign will create zArray from SWOTDEM structure.
 %
 % returns vector (length = numNodes) of section IDs.
 %
@@ -20,15 +20,6 @@ function [section, zArray] = subsectByObs(zArray, sectMin)
 % than sectMin, which can have undesireable results if sectMin is set high.
 
 % Ted Langhorst
-% created:  11/01/17
-
-% modified: 11/14/17    added section merge
-
-% bug fix: 1/4/17       fixed logic error in section merge that caused
-%                       self-deletion to be picked when merging up and down
-%                       would result in the number of deletions. Also added
-%                       check at the end to see if new sections could be
-%                       joined.
 
 %%
 

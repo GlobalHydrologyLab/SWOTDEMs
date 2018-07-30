@@ -12,41 +12,37 @@
 % x-- Hard-coded removal for now. I think this is fine.
 %
 %--------------------------------------------------------------------------
-
 % clear
 clearvars -except SVDStats SIMStats smoothStats rOpts
 close all
 
-opts.targetRL = 10;
-opts.sectMin = 3;
+opts.sectMin = 2;
 opts.maxDiff = 0; %set high to 'turn off' constraint.
+zField = 'geoHeight';
 
-% river = 'Sacramento';
-river = 'Po';
+river = 'Sacramento';
+% river = 'Po'; 
 % river = 'Tanana';
 
 switch river
     case 'Sacramento'
         load('./Sacramento/SacSimData.mat')
-        zField = 'geoHeight';
         % % hard-coded removal of far range data from pass 527
-        for i = 10:17
-            simulated(i).(zField)(339:487) = NaN;
-        end
-        simulated(6) = [];
+%         for i = 10:17
+%             simulated(i).(zField)(339:487) = NaN;
+%         end
+        simulated(6) = []; %remove high discharge day
         truth(6) = [];
         groups = [ones(1,8) ones(1,8)+1]';
         
     case 'Po'
         load('./Po/PoSimData.mat')
-        zField = 'nHeight';
         simulated(1:17) = trimFields(simulated(1:17),205:400);
         truth(1:17) = trimFields(truth(1:17),205:400);
         groups = [ones(1,17) ones(1,34)+1 ones(1,18)+2]';
 
     case 'Tanana'
-        load('./Tanana/TananaSimData.mat')
-        zField = 'geoHeight';
+        load('./Tanana/TananaSimData.mat') 
         simulated(9:12) = trimFields(simulated(9:12),250:675);
         truth(9:12) = trimFields(truth(9:12),250:675);
         simulated = trimFields(simulated,25:600);
@@ -66,8 +62,9 @@ nodeRng = [min(simAllign.node(1,:)), max(simAllign.node(end,:))];
 truth = trimFields(truth,nodeRng);
 truthAllign = nodeAllign(truth);
 
-%subSectByObs choses the rectangular matrices for svd
+%subSectByObs chooses the rectangular matrices for svd
 [section, zAll] = subsectByObs(simAllign.(zField),opts.sectMin);
+% [section, zAll] = subsectByObs(truthAllign.(zField),opts.sectMin);
 
 %remove bias
 observedBy = ~isnan(zAll);
@@ -88,7 +85,6 @@ for r = min(section):max(section)
     
     %assemble full rectangular matrices of s,z data 
     z = zAll(inSect,:);
-%     z = truthAllign.(zField)(inSect,:); %testing svd on noise-free data
     [z, delCol] = nanRows(z,2);
     s = simAllign.sCoord(inSect,~delCol);
 
@@ -114,40 +110,33 @@ for r = min(section):max(section)
     sAll(inSect,~delCol) = s;
     
     opts.avgSV = opts.avgSV + size(z,1).*numel(opts.iSV{r});
+    
+%     find(cumsum(diag(S)) ./ sum(diag(S)) > 0.99,1)
 end
 missingRows = sum(isnan(z2All),2) == size(z2All,2);
 opts.avgSV = opts.avgSV ./ (length(z2All) - sum(missingRows));
  
 %constrain profiles
 for i = 1:size(z2All,2)
-%     weight(:,i) = movstd(zAll(:,i),7);
-%     z2All(:,i) = slopeConstrain(z2All(:,i),opts.maxDiff, weight(:,i), 0);
-
     z2All(:,i) = slopeConstrain(z2All(:,i),opts.maxDiff);
 end
 
-% avgProf = slopeConstrain(z2All,opts.maxDiff);
-
-
 skm = nanmean(sAll,2)/1000;
 
-zErr = zAll - truthAllign.(zField);
-z2Err = z2All - truthAllign.(zField);
 
-
-simStats = reachStats(skm,zAll,truthAllign.(zField),opts.targetRL);
-svdStats = reachStats(skm,z2All,truthAllign.(zField),opts.targetRL);
-% avgStats = reachStats(skm,avgProf,nanmean(truthAllign.(zField),2), opts.targetRL);
+simStats = nodeStats(skm,zAll,truthAllign.(zField));
+svdStats = nodeStats(skm,z2All,truthAllign.(zField));
 %% 
 
 %Renato's gaussian smoothing.
-sigma = opts.targetRL/5;
+RL = 10;
+sigma = RL/5;
 for i = 1:size(zAll,2)
     [smoothProfs(:,i),~] = GaussianAveraging(skm,zAll(:,i), ... 
-        simAllign.nWidth(:,i),opts.targetRL,sigma);
+        simAllign.nWidth(:,i),RL,sigma);
 end
 
-smoothStats.(river) = reachStats(skm,smoothProfs,truthAllign.(zField),opts.targetRL);
+smoothStats.(river) = nodeStats(skm,smoothProfs,truthAllign.(zField));
 
 SVDStats.(river) = svdStats;
 SVDStats.(river).x = simAllign.easting;
@@ -164,6 +153,7 @@ rOpts.(river) = opts;
 %--------------------------------------------------------------------------
 % plots
 %--------------------------------------------------------------------------
+set(0,'defaultAxesFontSize',12,'DefaultAxesFontName','Times New Roman')
 
 %rothko section plot
 % figure()
@@ -184,82 +174,56 @@ rOpts.(river) = opts;
 
 %original and approx profiles
 handle = figure();
-subplot(2,1,1);
-plot(skm,zAll,'k')
-% plot(skm,truthAllign.(zField))
-hold on
-% xlabel('Flow Distance (km)')
-ylabel('Elevation (m)')
-title('Original Simulation')
-set(gca, 'FontName', 'Times New Roman')
 
-subplot(2,1,2);
+ax = tight_subplot(3,1,[.05 .05],[.075 .05],[.1 .05]);
+
+axes(ax(1))
+plot(skm,truthAllign.(zField),'k')
+ylabel('Elevation (m)')
+title('Hydrodynamic Model')
+set(ax(1),'XTickLabel',[])
+
+axes(ax(2))
+plot(skm,zAll,'k')
+ylabel('Elevation (m)')
+title('Simulated SWOT')
+set(ax(2),'XTickLabel',[])
+
+axes(ax(3))
 plot(skm,z2All,'k')
-hold on
 xlabel('Flow Distance (km)')
 ylabel('Elevation (m)')
 title('Constrained Low-Rank Approximation')
-set(gca, 'FontName', 'Times New Roman')
 
-% for r = reaches
-%     ir = find(reachVec == r,1,'last');
-%     xr(r) = skm(ir);
-%     yr(r) = truthAllign.(zField)(ir,3);
-% end
-% subplot(2,1,1)
-% scatter(xr,yr, 100, reaches,'filled')
-% subplot(2,1,2)
-% scatter(xr,yr, 100, reaches,'filled')
-
-allAxes = findobj(handle, 'type', 'axes');
-linkaxes(allAxes);
+linkaxes(ax);
 set(gcf,'Units','normalized','Position',[0.013672 0.013194 0.59922 0.91528])
-% set(gcf,'Units','normalized','Position',[0.30195 0.42569 0.21562 0.21597])
-% set(gca,'XLim',[16 26])
+% set(gcf,'Units','centimeter','Position',[27.269 21.625 18 18])
+% set(gca,'XLim',[17 27])
 % set(gca,'YLim',[28 35])
-
+% pdfExport(gcf,'/Users/Ted/Documents/DEMPaper/figuresDraft/methods/methods')
 
 figure()
-subplot(2,2,1)
-scatter(simStats.slopeMAE, svdStats.slopeMAE,'filled')
-scatter1to1(gca,'origin');
-xlabel('Simulated MAE(cm/km)')
-ylabel('LRA MAE(cm/km)')
-title('MAE')
-% 
-svdStats.slopePctChange = (nanmean(svdStats.slopeMAE)-nanmean(simStats.slopeMAE))./nanmean(simStats.slopeMAE) * 100;
-subplot(2,2,2)
-text('Units','normalized','position',[0.05 0.8],'String', ... 
-    ['Sim: ' num2str(nanmean(simStats.slopeMAE)) ' cm/km'], 'FontSize',24)
-text('Units','normalized','position',[0.05 0.6],'String', ... 
-    ['LRA: ' num2str(nanmean(svdStats.slopeMAE)) ' cm/km'], 'FontSize',24)
-text('Units','normalized','position',[0.05 0.4],'String', ... 
-    ['% change: ' num2str(svdStats.slopePctChange)], 'FontSize',24)
-set(gca,'visible','off')
-SVDStats.(river).slopePctChange = svdStats.slopePctChange;
-
-subplot(2,2,3)
+subplot(1,2,1)
 scatter(simStats.dailyMAE.*100, svdStats.dailyMAE.*100,'filled')
 scatter1to1(gca,'origin');
 xlabel('Simulated MAE(cm)')
 ylabel('LRA MAE(cm)')
 title('MAE')
-% 
-
 
 svdStats.nodePctChange = ((svdStats.totMAE - simStats.totMAE) ./ simStats.totMAE) * 100;
-subplot(2,2,4)
-text('Units','normalized','position',[0.05 0.8],'String', ... 
+subplot(1,2,2)
+text('Units','normalized','position',[0.05 0.7],'String', ... 
     ['Sim: ' num2str(simStats.totMAE.*100) ' cm'], 'FontSize',24)
-text('Units','normalized','position',[0.05 0.6],'String', ... 
+text('Units','normalized','position',[0.05 0.5],'String', ... 
     ['LRA: ' num2str(svdStats.totMAE.*100) ' cm'], 'FontSize',24)
-text('Units','normalized','position',[0.05 0.4],'String', ... 
+text('Units','normalized','position',[0.05 0.3],'String', ... 
     ['% change: ' num2str(svdStats.nodePctChange)], 'FontSize',24)
 set(gca,'visible','off')
 SVDStats.(river).nodePctChange = svdStats.nodePctChange;
 
 SIMStats.(river).totRMSE
 SVDStats.(river).totRMSE
+((svdStats.totRMSE - simStats.totRMSE) / simStats.totRMSE) * 100
 % subplot(2,2,4)
 % scatter(simStats.slopeRRMSE, svdStats.slopeRRMSE,[],nCol,'filled')
 % scatter1to1(gca,'origin');
@@ -296,26 +260,64 @@ SVDStats.(river).totRMSE
 
 %% gif
 % 
-% fileName = '/Users/Ted/Documents/InverseTheory/termProj/lra_truth.gif';
+% fileName = '/Users/Ted/Documents/GHL_meetings/DAWG_blog/18.06.18/animation.gif';
 % delete(fileName)
 % figure()
-% set(gcf,'Units','Normalized','Position',[0.319 0.495 0.352 0.25])
+% box on
+% set(gcf,'color','white')
+% set(gcf,'Units','centimeters','Position',[27.693 28.011 18 6.2442])
+% 
 % plot(nanmean(s,2)/1000,SVRecomp(U,S,V,1)+mz)
 % text('Units','normalized','position',[0.6 0.8],'String','rank: 1', 'FontSize',24)
-% xlim = [16 26]; ylim = [28 35];
+% xlim = [17 27]; ylim = [28 35];
 % set(gca,'XLim',xlim, 'YLim',ylim)
-% box off
 % xlabel('Flow Distance (km)')
 % ylabel('Elevation (m)')
-% gif(fileName,'DelayTime',0.75,'frame',gcf)
+% 
+% gif(fileName,'DelayTime',0.5,'frame',gcf)
 % 
 % 
 % for i = 2:16
 % plot(nanmean(s,2)/1000,SVRecomp(U,S,V,1:i)+mz)
-% box off
 % text('Units','normalized','position',[0.6 0.8],'String',['rank: ' num2str(i)], 'FontSize',24)
 % set(gca,'XLim',xlim, 'YLim',ylim)
 % xlabel('Flow Distance (km)')
 % ylabel('Elevation (m)')
+% 
 % gif
 % end
+
+%% plot vector 2 orbit diff
+% oneEV = SVRecomp(U,S,V,1)+mz;
+% twoEV = SVRecomp(U,S,V,1:2)+mz;
+% 
+% figure
+% text('Units','normalized','position',[0.6 0.8],'String','rank: 1', 'FontSize',24)
+% 
+% 
+% 
+% subplot(2,1,1)
+% hold on
+% plot(nanmean(s,2)/1000,oneEV(:,grp==2),'k','Linewidth',1)
+% plot(nanmean(s,2)/1000,oneEV(:,grp==1),'r','Linewidth',1)
+% 
+% xlim = [16 26]; ylim = [28 35];
+% set(gca,'XLim',xlim, 'YLim',ylim)
+% 
+% 
+% subplot(2,1,2)
+% hold on
+% plot(nanmean(s,2)/1000,twoEV(:,grp==2),'k','Linewidth',1)
+% plot(nanmean(s,2)/1000,twoEV(:,grp==1),'r','Linewidth',1)
+% 
+% 
+% 
+% 
+% xlim = [16 26]; ylim = [28 35];
+% set(gca,'XLim',xlim, 'YLim',ylim)
+% 
+% 
+
+
+
+

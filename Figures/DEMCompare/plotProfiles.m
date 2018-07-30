@@ -57,17 +57,18 @@ Sac.lidar = profResample(lidar,clOut,Sac.skm,transParam,meanZ,maxDiff);
 
 Sac.DEMNames = fields(Sac);
 Sac.DEMNames = Sac.DEMNames([3,5:end]);
-% Sac.errTable = errorTable(Sac,Sac.DEMNames,Sac.avgTruth,Sac.skm);
+Sac.errTable = errorTable(Sac,Sac.DEMNames,Sac.avgTruth,Sac.skm);
 
 %prepare truth data
-load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Sacramento/Longitudinalpro/boatXYZ_geoid.mat')
-Sac.gps = gps;
-Sac.gps(:,4:5) = xy2sn(clOut,[gps(:,1),gps(:,2)],transParam);
-Sac.gps = nanRows(Sac.gps);
-[~,gpsUnique] = unique(Sac.gps(:,4));
-Sac.gps = Sac.gps(gpsUnique,:);
-Sac.gps(:,4) = Sac.gps(:,4)./1000; %km 
-Sac.errTable = errorTable(Sac,Sac.DEMNames,Sac.gps(:,3),Sac.gps(:,4));
+% load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Sacramento/Longitudinalpro/boatXYZ_geoid.mat')
+% Sac.gps = gps;
+% Sac.gps(:,4:5) = xy2sn(clOut,[gps(:,1),gps(:,2)],transParam);
+% Sac.gps = nanRows(Sac.gps);
+% [~,gpsUnique] = unique(Sac.gps(:,4));
+% Sac.gps = Sac.gps(gpsUnique,:);
+% Sac.gps(:,4) = Sac.gps(:,4)./1000; %km 
+% Sac.skm(Sac.skm > 51.1680 & Sac.skm<90.7448) = NaN; %have to make sure the center section without a boat profile does not get interpolated.
+% Sac.errTable = errorTable(Sac,Sac.DEMNames,Sac.gps(:,3),Sac.gps(:,4));
 
 %% Tanana
 load('Tanana/DEMProfiles/demProfiles.mat')

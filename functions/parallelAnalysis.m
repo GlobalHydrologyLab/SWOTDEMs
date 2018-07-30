@@ -14,6 +14,10 @@ function [U,S,V,iSV,iSig,St] = parallelAnalysis(z,n,grp,p,plotOpt)
 % plotOpt is a binary option to plot V vectors that were removed after
 % parallel analysis.
 %
+% [U,S,V] = parallelAnalysis(z,1000);
+% [U,S,V,iSV,iSig,St] = parallelAnalysis(...,grp,p,plotOpt);
+%
+%
 % 4/12/18 Ted Langhorst
 %%
 if ~exist('n','var')
@@ -81,13 +85,13 @@ iSV = find(maskPA); %passes PA but not significant by group
 
 sVals = diag(S);
 
-figure
-bar(sVals,'FaceColor',[0.8 0.8 0.8])
-hold on
-bar(sVals.*maskPA,'k')
-plot(SPAt,'r--','Linewidth',2)
-% set(gca,'YScale','log')
-hold off
+% figure
+% bar(sVals,'FaceColor',[0.8 0.8 0.8])
+% hold on
+% bar(sVals.*maskPA,'k')
+% plot(SPAt,'r--','Linewidth',2)
+% % set(gca,'YScale','log')
+% hold off
 
 
 end

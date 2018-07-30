@@ -22,66 +22,76 @@ tIndex=1;
 
 load geoid
 
+shapefile = shaperead([k(35).folder '/' fileName{35}]);
+lat = [shapefile.Y]';
+lon = [shapefile.X]';
+[N,refvec] = egm96geoid(1,[min(lat) max(lat)],[min(lon) max(lon)]);
+geoidCorrection = ltln2val(N,refvec,lat,lon,'bicubic');
+
 for i = 1 : length(fileName)
     
     if isNodeFile(i)
         shapefile = shaperead( [k(i).folder '/' fileName{i}] );
-    end
     
-    %save node simulator files in struct 'truth'
-    if ~isTruthFile(i) 
-        
-        simulated(sIndex).name = char(fileName(i));
-        simulated(sIndex).reach = [shapefile.Reach_ID]';
-        simulated(sIndex).node = [shapefile.Node_ID]';
-        simulated(sIndex).lat = [shapefile.Y]';
-        simulated(sIndex).lon = [shapefile.X]';
-        [simulated(sIndex).easting, simulated(sIndex).northing] = ...
-            mfwdtran(utmStruct,simulated(sIndex).lat,simulated(sIndex).lon);
-        simulated(sIndex).nHeight = [shapefile.N_Hght]';
-        simulated(sIndex).nWidth = [shapefile.N_width]';
-        simulated(sIndex).nObs = [shapefile.nobs]';
-        
-        missingData = simulated(sIndex).nHeight == -9999;
-        simulated(sIndex).nHeight(missingData) = NaN;
-        simulated(sIndex).nWidth(missingData) = NaN;
-        
-        simulated(sIndex).geoHeight = simulated(sIndex).nHeight - ... 
-            mean(ltln2val(geoid, geoidrefvec, ...
-            simulated(sIndex).lat, simulated(sIndex).lon));
-        
-        sIndex = sIndex + 1;
-    end
-    
-    
-    %save node truth files in struct 'truth'
-    if isTruthFile(i) 
-        
-        truth(tIndex).name = char(fileName(i));
-        truth(tIndex).reach = [shapefile.Reach_ID]';
-        truth(tIndex).node = [shapefile.Node_ID]';
-        truth(tIndex).lat = [shapefile.Y]';
-        truth(tIndex).lon = [shapefile.X]';
-        [truth(tIndex).easting, truth(tIndex).northing] = ...
-            mfwdtran(utmStruct,truth(tIndex).lat,truth(tIndex).lon);
-        truth(tIndex).nHeight = [shapefile.N_Hght]';
-        truth(tIndex).nWidth = [shapefile.N_width]';
-        truth(tIndex).nObs = [shapefile.nobs]';
-        
-        missingData = truth(tIndex).nHeight == -9999;
-        truth(tIndex).nHeight(missingData) = NaN;
-        truth(tIndex).nWidth(missingData) = NaN;
-        
-        truth(tIndex).geoHeight = truth(tIndex).nHeight - ... 
-            mean(ltln2val(geoid, geoidrefvec, ...
-            truth(tIndex).lat, truth(tIndex).lon));
-        
-        tIndex = tIndex + 1;
+        %save node simulator files in struct 'truth'
+        if ~isTruthFile(i) 
+
+            simulated(sIndex).name = char(fileName(i));
+            simulated(sIndex).reach = [shapefile.Reach_ID]';
+            simulated(sIndex).node = [shapefile.Node_ID]';
+            simulated(sIndex).lat = [shapefile.Y]';
+            simulated(sIndex).lon = [shapefile.X]';
+            [simulated(sIndex).easting, simulated(sIndex).northing] = ...
+                mfwdtran(utmStruct,simulated(sIndex).lat,simulated(sIndex).lon);
+            simulated(sIndex).nHeight = [shapefile.N_Hght]';
+            simulated(sIndex).nWidth = [shapefile.N_width]';
+            simulated(sIndex).nObs = [shapefile.nobs]';
+
+            missingData = simulated(sIndex).nHeight == -9999;
+            simulated(sIndex).nHeight(missingData) = NaN;
+            simulated(sIndex).nWidth(missingData) = NaN;
+
+%             simulated(sIndex).geoHeight = simulated(sIndex).nHeight - ... 
+%                 mean(ltln2val(geoid, geoidrefvec, ...
+%                 simulated(sIndex).lat, simulated(sIndex).lon));
+%             
+            simulated(sIndex).geoHeight = simulated(sIndex).nHeight - geoidCorrection;
+
+            sIndex = sIndex + 1;
+        end
+
+
+        %save node truth files in struct 'truth'
+        if isTruthFile(i) 
+
+            truth(tIndex).name = char(fileName(i));
+            truth(tIndex).reach = [shapefile.Reach_ID]';
+            truth(tIndex).node = [shapefile.Node_ID]';
+            truth(tIndex).lat = [shapefile.Y]';
+            truth(tIndex).lon = [shapefile.X]';
+            [truth(tIndex).easting, truth(tIndex).northing] = ...
+                mfwdtran(utmStruct,truth(tIndex).lat,truth(tIndex).lon);
+            truth(tIndex).nHeight = [shapefile.N_Hght]';
+            truth(tIndex).nWidth = [shapefile.N_width]';
+            truth(tIndex).nObs = [shapefile.nobs]';
+
+            missingData = truth(tIndex).nHeight == -9999;
+            truth(tIndex).nHeight(missingData) = NaN;
+            truth(tIndex).nWidth(missingData) = NaN;
+
+%             truth(tIndex).geoHeight = truth(tIndex).nHeight - ... 
+%                 mean(ltln2val(geoid, geoidrefvec, ...
+%                 truth(tIndex).lat, truth(tIndex).lon));
+            
+            truth(tIndex).geoHeight = truth(tIndex).nHeight - geoidCorrection;
+
+            tIndex = tIndex + 1;
+        end
     end
     
 end
 
-trimRng = 1:715;
+trimRng = 1:710;
 simulated = trimFields(simulated,trimRng);
 truth = trimFields(truth,trimRng);
 
@@ -104,9 +114,9 @@ for i = 1:length(simulated)
    xy2snAscendCheck(sn(:,1));
 end
 
-
-clearvars -except simulated truth
-save('./Sacramento/SacSimData.mat')
+% % 
+% clearvars -except simulated truth
+% save('./Sacramento/SacSimData.mat')
 
 
 

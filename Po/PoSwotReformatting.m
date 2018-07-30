@@ -17,6 +17,8 @@ utmStruct.zone = '32T';
 utmStruct.geoid = wgs84Ellipsoid;
 utmStruct = defaultm(utmStruct);
 
+[N,refvec] = egm96geoid(1,[44.888 45.079],[10.757 12.034]);
+
 % import shapfiles
 sIdx=1;
 tIdx=1;
@@ -40,8 +42,11 @@ for i = 1 : length(fileName)
             simulated(sIdx).nHeightStd = [shapefile.h_n_std]';
             simulated(sIdx).nWidth = [shapefile.w_ptp]';
             simulated(sIdx).nObs = [shapefile.nobs]';
-
             
+            geoidCorrection = ltln2val(N,refvec, ... 
+                simulated(sIdx).lat,simulated(sIdx).lon,'bicubic');
+            simulated(sIdx).geoHeight = simulated(sIdx).nHeight - geoidCorrection;
+
             sIdx = sIdx + 1;
 
         else
@@ -74,6 +79,10 @@ for i = 1 : length(fileName)
             else
                 truth(tIdx).nObs = [shapefile.nobs]';
             end
+            
+            geoidCorrection = ltln2val(N,refvec, ... 
+                truth(tIdx).lat,truth(tIdx).lon,'bicubic');
+            truth(tIdx).geoHeight = truth(tIdx).nHeight - geoidCorrection;
 
             tIdx = tIdx + 1;
         end
@@ -82,10 +91,10 @@ for i = 1 : length(fileName)
 end
 %%
 
-% now we have a problem where truth files and simulator files do not match
-% up. Left and right simulator outputs in pass 461 are separate files,
-% whereas truth inputs are one profile for that overpass. This is the best
-% way I can think to pair and pare the files.
+% % now we have a problem where truth files and simulator files do not match
+% % up. Left and right simulator outputs in pass 461 are separate files,
+% % whereas truth inputs are one profile for that overpass. This is the best
+% % way I can think to pair and pare the files.
 
 for i = 1:numel(truth)
     iPD = regexp(truth(i).name,'[1234567890]'); %find any numbers in name

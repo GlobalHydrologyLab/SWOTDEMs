@@ -1,7 +1,11 @@
 function [profOut] = nodeAllign(prof, nodeField)
-% Alligns all non-singeton fields from prof into matricies and returns them
-% in a structure with same field names. optional input nodeField (default =
-% 'node') specifies which field is used to allign the profiles.
+% Alligns all non-singeton fields from structure entries in prof into
+% matricies and returns them in a structure with same field names. Optional
+% input nodeField (default = 'node') specifies which field is used to
+% allign the profiles.
+%
+% alligned = nodeAllign(simulated);
+% alligned = nodeAllign(simulated,'fieldName');
 
 if nargin < 2
     nodeField = 'node';

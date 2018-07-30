@@ -1,4 +1,4 @@
-function [x] = slopeConstrain(dIn,maxDiff,weight,secondDeriv)
+function [x] = slopeConstrain(dIn,maxDiff,weight)
 % x = slopeConstrain(d,maxDiff)
 %
 %Takes in data d, sets up and solves lsqlin() such that:
@@ -8,8 +8,7 @@ function [x] = slopeConstrain(dIn,maxDiff,weight,secondDeriv)
 %d can be a matrix or a column vector. rows are considered to be the same x
 %value in the regression. Calling slopeConstrain on a matrix will use all
 %non-NaN values in the row to estimate the row value. maxDiff has a
-%default value of 0. secondDeriv makes the constraint operator calculate a
-%second derivative, instead of first.
+%default value of 0. 
 %
 %Read documentation for lsqlin for more info.
 
@@ -17,9 +16,7 @@ function [x] = slopeConstrain(dIn,maxDiff,weight,secondDeriv)
 if ~exist('maxDiff','var')
     maxDiff = 0;
 end
-if ~exist('secondDeriv','var')
-    secondDeriv = 0;
-end
+
 if ~exist('weight','var')
     weight = ones(size(dIn));
 else
@@ -43,12 +40,11 @@ A = zeros(nNodes);
 b = zeros(nNodes,1) + maxDiff;
 
 
-% Objective function:   Cx - d
+% Objective function:   ||Cx - d||2
 % contrained by:        Ax <= b
 
 firstRow = 1;
 for i = 1:nNodes
-%     notNan = observed(i,:);
     nd = sum(~isnan(dIn(i,:)));
     
     if nd ~=0
@@ -63,15 +59,9 @@ for i = 1:nNodes
         if i < nNodes
             A(i,i+1) = 1;
             A(i,i) = -1;
-        end
-        
-        if secondDeriv && i<nNodes-1
-                A(i,i+1) = 2;
-                A(i,i+2) = -1;
-        end
+        end  
         
     end
-
 end
 
 options = optimset('display','off');

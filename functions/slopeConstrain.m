@@ -9,8 +9,7 @@ function [x] = slopeConstrain(dIn,maxDiff,weight)
 %value in the regression. Calling slopeConstrain on a matrix will use all
 %non-NaN values in the row to estimate the row value. maxDiff has a
 %default value of 0. 
-%
-%Read documentation for lsqlin for more info.
+
 
 
 if ~exist('maxDiff','var')

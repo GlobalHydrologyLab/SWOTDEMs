@@ -14,7 +14,7 @@ aster = calcConvexity(Po.skm,Po.ASTER,smoothWindow,cWindow);
 tinitaly = calcConvexity(Po.skm,Po.TINITALY,smoothWindow,cWindow);
 
 
-sc = 0.3;
+sc = 0.4; %range of y for each subplot
 
 figure
 hold on
@@ -30,6 +30,9 @@ set(gca,'YTick',-sc/4:sc/2:5.25*sc)
 plot(xl,[(0:5)*sc; (0:5)*sc],'k--')
 plot(xl,[((sc/2):sc:(5*sc)); ((sc/2):sc:(5*sc))],'k-')
 
+%remove section of ASTER that is outside subplot range.
+% aster(abs(aster)>sc/2) = NaN;
+
 plot(Po.skm,truth,'k','Linewidth',2)
 plot(Po.skm,swot + 1*sc,'Linewidth',2)
 plot(Po.skm,srtm + 2*sc,'Linewidth',2)
@@ -38,8 +41,9 @@ plot(Po.skm,aster + 4*sc,'Linewidth',2)
 plot(Po.skm,tinitaly + 5*sc,'Linewidth',2)
 
 xlabel('Flow Distance (m)')
+ylabel('Concavity (m/km^2)')
 
-set(gca,'YTickLabel',reshape((ones(5,1)*[-sc/2,sc/2])',[10,1]))
+set(gca,'YTickLabel',reshape((ones(5,1)*[-sc/4,sc/4])',[10,1]))
 
 yyaxis right
 set(gca,'YTick',1/12 : 1/6 : 11/12)
@@ -48,7 +52,7 @@ set(gca,'YColor',[0 0 0])
 
 
 set(gcf,'Units','centimeters','Position',[28 19.121 17.992 15.134])
-pdfExport(gcf,'/Users/Ted/Documents/DEMPaper/figuresDraft/poConvexities/demCurvatures_10km')
+pdfExport(gcf,'/Users/Ted/OneDrive - University of North Carolina at Chapel Hill/SWOTDEMs/figures/poConvexities/demCurvatures_10km')
 
 function [c] = calcConvexity(s,z,smoothWindow,cWindow)
     n = length(s);

@@ -9,7 +9,7 @@ function [section, zArray] = subsectByObs(zArray, sectMin)
 % returns vector (length = numNodes) of section IDs.
 %
 % Function finds sections of the river that are observed by the same
-% combination of profiles.
+% combination of overpasses.
 %
 % optional merging of sections with less than sectMin nodes. Finds shortest
 % section that is less than sectMin and merges with neighboring section

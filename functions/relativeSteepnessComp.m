@@ -1,6 +1,4 @@
 function [comp] = relativeSteepnessComp(skm,z,nSlopes,steepMaskTrue)
-%UNTITLED Summary of this function goes here
-%   Detailed explanation goes here
 
 [Rd,~,sId] = relativeSteepness(skm,z,nSlopes);
 simCutoff = nanmean(Rd) + nanstd(Rd);

@@ -5,8 +5,7 @@ function [profiles] = trimFields(profiles, trimBy)
 % number of nodes. trimBy is vector with length equal to number of nodes,
 % where 0 marks deletion of value. Alternatively, trimBy can be the range
 % of node IDs- in this case a binary mask will be created where
-% profiles.nodes is within the range of trimBy. trimBy is not to be
-% confused with the greasy hat, trilby.
+% profiles.nodes is within the range of trimBy.
 %
 % Function written to trim down simulator input data set to a desired
 % extent. 11/1/17.

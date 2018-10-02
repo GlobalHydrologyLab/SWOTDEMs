@@ -81,9 +81,9 @@ end
 
 iSig = find(iSig);
 maskPA(iSig) = 0;
-iSV = find(maskPA); %passes PA but not significant by group
+iSV = find(maskPA); %passes PA and not significant by group
 
-sVals = diag(S);
+% sVals = diag(S);
 
 % figure
 % bar(sVals,'FaceColor',[0.8 0.8 0.8])

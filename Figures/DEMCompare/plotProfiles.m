@@ -4,13 +4,11 @@
 clear
 close all
 
-% load('smoothingTest/PA_mD0.mat')
-load('./smoothingTest/PA_SacFix2.mat')
-load('./smoothingTest/PA_geoidFix.mat')
+load('./Figures/averageSWOTProfiles.mat')
 maxDiff = 0;
 
 %% Po
-load('Po/DEMProfiles/dems.mat')
+load('./Figures/DEMCompare/poDEMs.mat')
 riv = 'Po';
 
 avgCenter = [nanmean(SVDStats.(riv).x,2),nanmean(SVDStats.(riv).y,2)];
@@ -35,7 +33,7 @@ Po.DEMNames = Po.DEMNames([3,5:end]);
 Po.errTable = errorTable(Po,Po.DEMNames,Po.avgTruth,Po.skm);
 
 %% Sacramento
-load('Sacramento/DEMProfiles/dems.mat')
+load('./Figures/DEMCompare/sacDEMs.mat')
 riv = 'Sacramento';
 avgCenter = [nanmean(SVDStats.(riv).x,2),nanmean(SVDStats.(riv).y,2)];
 Sac.meanProf = SVDStats.(riv).meanProf;
@@ -59,7 +57,7 @@ Sac.DEMNames = fields(Sac);
 Sac.DEMNames = Sac.DEMNames([3,5:end]);
 Sac.errTable = errorTable(Sac,Sac.DEMNames,Sac.avgTruth,Sac.skm);
 
-%prepare truth data
+%prepare GPS data
 % load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Sacramento/Longitudinalpro/boatXYZ_geoid.mat')
 % Sac.gps = gps;
 % Sac.gps(:,4:5) = xy2sn(clOut,[gps(:,1),gps(:,2)],transParam);
@@ -71,7 +69,7 @@ Sac.errTable = errorTable(Sac,Sac.DEMNames,Sac.avgTruth,Sac.skm);
 % Sac.errTable = errorTable(Sac,Sac.DEMNames,Sac.gps(:,3),Sac.gps(:,4));
 
 %% Tanana
-load('Tanana/DEMProfiles/demProfiles.mat')
+load('./Figures/DEMCompare/tananaDEMs.mat')
 riv = 'Tanana';
 avgCenter = [nanmean(SVDStats.(riv).x,2),nanmean(SVDStats.(riv).y,2)];
 Tan.meanProf = SVDStats.(riv).meanProf;
@@ -93,7 +91,7 @@ Tan.DEMNames = fields(Tan);
 Tan.DEMNames = Tan.DEMNames([3,5:end]);
 Tan.errTable = errorTable(Tan,Tan.DEMNames,Tan.avgTruth,Tan.skm);
 
-%prepare truth data
+%prepare GPS data
 % load('/Users/Ted/Documents/MATLAB/SWOTDEMs/Tanana/gpsProfiles/gpsProf.mat')
 % gps(:,4:5) = xy2sn(clOut,[gps(:,1),gps(:,2)],transParam);
 % gps = nanRows(gps);

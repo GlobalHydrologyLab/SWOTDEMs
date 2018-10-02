@@ -5,9 +5,7 @@ addpath('/Users/Ted/Documents/MATLAB/cited_functions/fitcircle')
 load('./smoothingTest/PA_geoidFix.mat')
 set(0,'defaultAxesFontSize',12,'DefaultAxesFontName','Times New Roman')
 
-
 md = 0.01;
-
 
 s = SVDStats.Po.s;
 z = slopeConstrain(SVDStats.Po.z,md);
@@ -66,7 +64,7 @@ h = colorbar;
 
 cx = [0 0.2 0.4 0.6 0.8 1];
 cMax = max(abs(c));
-cy = round([-cMax -cMax/(3/5) -cMax/(1/5) cMax/(1/5) cMax/(3/5) cMax],3);
+cy = round([-cMax -cMax*(3/5) -cMax*(1/5) cMax*(1/5) cMax*(3/5) cMax],3);
 
 h.Ticks = cx;
 h.TickLabels = cy;
@@ -79,7 +77,7 @@ set(gca,'YLim',[2.5 17.5],'XLim',[2.5,130])
 
 
 set(gcf,'Units','centimeters','Position',[27.693 27.093 18 7.1614])
-% pdfExport(gcf,'/Users/Ted/Documents/DEMPaper/figuresDraft/poConvexities/poCurvature_10km')
+pdfExport(gcf,'/Users/Ted/Documents/DEMPaper/figuresDraft/poConvexities/poCurvature_10km')
 
 
 

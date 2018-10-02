@@ -17,7 +17,8 @@ clearvars -except SVDStats SIMStats smoothStats rOpts
 close all
 
 opts.sectMin = 2;
-opts.maxDiff = 0; %set high to 'turn off' constraint.
+opts.maxDiff = 0; 
+
 zField = 'geoHeight';
 
 river = 'Sacramento';
@@ -27,10 +28,6 @@ river = 'Sacramento';
 switch river
     case 'Sacramento'
         load('./Sacramento/SacSimData.mat')
-        % % hard-coded removal of far range data from pass 527
-%         for i = 10:17
-%             simulated(i).(zField)(339:487) = NaN;
-%         end
         simulated(6) = []; %remove high discharge day
         truth(6) = [];
         groups = [ones(1,8) ones(1,8)+1]';
@@ -51,10 +48,7 @@ switch river
         groups = [ones(1,4) ones(1,4)+1 ones(1,4)+2]';
 end
 
-% clearvars -except simulated truth zField opts
 
-%Group data into matrices without gaps, intelligently deleting data so that
-%all sections have >= opts.sectMin rows
 simAllign = nodeAllign(simulated);
 
 %trim truth to sim extent
@@ -64,7 +58,6 @@ truthAllign = nodeAllign(truth);
 
 %subSectByObs chooses the rectangular matrices for svd
 [section, zAll] = subsectByObs(simAllign.(zField),opts.sectMin);
-% [section, zAll] = subsectByObs(truthAllign.(zField),opts.sectMin);
 
 %remove bias
 observedBy = ~isnan(zAll);
@@ -111,7 +104,6 @@ for r = min(section):max(section)
     
     opts.avgSV = opts.avgSV + size(z,1).*numel(opts.iSV{r});
     
-%     find(cumsum(diag(S)) ./ sum(diag(S)) > 0.99,1)
 end
 missingRows = sum(isnan(z2All),2) == size(z2All,2);
 opts.avgSV = opts.avgSV ./ (length(z2All) - sum(missingRows));
@@ -128,7 +120,7 @@ simStats = nodeStats(skm,zAll,truthAllign.(zField));
 svdStats = nodeStats(skm,z2All,truthAllign.(zField));
 %% 
 
-%Renato's gaussian smoothing.
+%Renato's gaussian smoothing for comparison.
 RL = 10;
 sigma = RL/5;
 for i = 1:size(zAll,2)
@@ -155,22 +147,6 @@ rOpts.(river) = opts;
 %--------------------------------------------------------------------------
 set(0,'defaultAxesFontSize',12,'DefaultAxesFontName','Times New Roman')
 
-%rothko section plot
-% figure()
-% imagesc(~isnan(zAll) .* section)
-% xlabel('Profile')
-% ylabel('Node')
-% c = lines;
-% c = c(1:max(section),:);
-% colormap([1 1 1; c])
-
-% %coverage/elevation plot
-% figure()
-% imAlpha=ones(size(zAll));
-% imAlpha(isnan(zAll))=0;
-% imagesc(zAll,'AlphaData',imAlpha);
-% colormap(brewermap(64,'YlGnBu'))
-% set(gca,'color',0*[1 1 1]);
 
 %original and approx profiles
 handle = figure();
@@ -257,7 +233,6 @@ SVDStats.(river).totRMSE
 % title(['Reach Slope Errors - ' river])
 %--------------------------------------------------------------------------
 
-
 %% gif
 % 
 % fileName = '/Users/Ted/Documents/GHL_meetings/DAWG_blog/18.06.18/animation.gif';
@@ -287,36 +262,7 @@ SVDStats.(river).totRMSE
 % gif
 % end
 
-%% plot vector 2 orbit diff
-% oneEV = SVRecomp(U,S,V,1)+mz;
-% twoEV = SVRecomp(U,S,V,1:2)+mz;
-% 
-% figure
-% text('Units','normalized','position',[0.6 0.8],'String','rank: 1', 'FontSize',24)
-% 
-% 
-% 
-% subplot(2,1,1)
-% hold on
-% plot(nanmean(s,2)/1000,oneEV(:,grp==2),'k','Linewidth',1)
-% plot(nanmean(s,2)/1000,oneEV(:,grp==1),'r','Linewidth',1)
-% 
-% xlim = [16 26]; ylim = [28 35];
-% set(gca,'XLim',xlim, 'YLim',ylim)
-% 
-% 
-% subplot(2,1,2)
-% hold on
-% plot(nanmean(s,2)/1000,twoEV(:,grp==2),'k','Linewidth',1)
-% plot(nanmean(s,2)/1000,twoEV(:,grp==1),'r','Linewidth',1)
-% 
-% 
-% 
-% 
-% xlim = [16 26]; ylim = [28 35];
-% set(gca,'XLim',xlim, 'YLim',ylim)
-% 
-% 
+
 
 
 
